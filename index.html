@@ -1084,6 +1084,11 @@ h1, h2, p { margin: 0; }
 /* first screen outside claude.ai: account or guest */
 .langs.welcome { gap: 18px; padding-block: 32px 32px; }
 .comp-link { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+
+/* the number of each translation (and of the example for it) when a card has several */
+.opt-n { display: inline-block; min-width: 1.5em; margin-right: 0.4em; padding: 0 0.35em; border-radius: 999px; background: var(--paper-2); border: 1px solid var(--line); color: var(--muted); font: 700 0.5em/1.5 var(--font-body); text-align: center; vertical-align: middle; }
+.kcard-ex .opt-n { font-size: 0.75rem; margin-right: 0.5em; }
+.stripe-word .opt-n { background: rgba(255, 255, 255, 0.6); }
 </style>
 <div id="app" class="app"></div>
 <div id="toast" class="toast" role="status" hidden></div>
@@ -1094,7 +1099,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '4.3';
+  const VERSION = '4.4';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -2613,7 +2618,7 @@ h1, h2, p { margin: 0; }
       ${c.conj ? `<ul class="kcard-conj" lang="de" aria-label="Presente">${c.conj.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
       ${
         c.exs
-          ? `<ul class="kcard-exs">${c.exs.map(([, de, es]) => `<li class="kcard-ex"><p class="ex-de" lang="de">${rich(de)}${speakBtn(plain(de))}</p><p class="ex-es" lang="es">${rich(es)}</p></li>`).join('')}</ul>`
+          ? ((nums) => `<ul class="kcard-exs">${c.exs.map(([, de, es], i) => `<li class="kcard-ex"><p class="ex-de" lang="de">${nums ? optNum(nums[i]) : ''}${rich(de)}${speakBtn(plain(de))}</p><p class="ex-es" lang="es">${rich(es)}</p></li>`).join('')}</ul>`)(exampleNumbers(c, d))
           : c.ex
             ? `<div class="kcard-ex"><p class="ex-de" lang="de">${rich(c.ex)}${speakBtn(plain(c.ex))}</p>${c.exEs ? `<p class="ex-es" lang="es">${rich(c.exEs)}</p>` : ''}</div>`
             : ''
@@ -2621,36 +2626,48 @@ h1, h2, p { margin: 0; }
       ${c.note ? `<p class="kcard-note" lang="es"><span class="note-label">Tipp</span>${rich(c.note)}</p>` : ''}`;
   }
 
-  // split a list of translations at the top-level "," and ";" (not inside brackets): "der Bauch, der Wanst"
+  // split a list of translations at the top-level "," and ";" (not inside brackets, nor inside ¡…! or ¿…?):
+  // "der Bauch, der Wanst"
   function optionsOf(text) {
     const out = [];
     let depth = 0;
     let cur = '';
     for (const ch of text) {
-      if (ch === '(' || ch === '[') depth += 1;
-      if (ch === ')' || ch === ']') depth = Math.max(0, depth - 1);
+      if ('([¡¿'.includes(ch)) depth += 1;
+      if (')]!?'.includes(ch)) depth = Math.max(0, depth - 1);
       if ((ch === ',' || ch === ';') && depth === 0) {
         out.push(cur.trim());
         cur = '';
       } else cur += ch;
     }
     out.push(cur.trim());
-    // a plural ending is not another translation: "die Durchsage, -n" stays one line
+    // a plural ending is not another translation: "die Durchsage, -n" stays one line; nor is a clause that
+    // goes on: "es kommt darauf an, dass..."
     return out.filter(Boolean).reduce((acc, o) => {
-      if (acc.length && /^(¨?-|=)/.test(o)) acc[acc.length - 1] += `, ${o}`;
+      if (acc.length && (/^(¨?-|=)/.test(o) || /^(dass|ob|wenn|weil|damit|um|als|wie|wo|was|sodass|bevor|nachdem|obwohl|während|falls|que|si)\b.*(\.\.\.|…)$/.test(o))) acc[acc.length - 1] += `, ${o}`;
       else acc.push(o);
       return acc;
     }, []);
   }
-  // the answer: one line per translation when there are several, then the rest (after " · ") smaller
-  function answerLines(f, c) {
+  const optNum = (i) => `<span class="opt-n" aria-hidden="true">${i + 1}</span>`;
+  // the answer: one numbered line per translation when there are several (vocabulary decks only: elsewhere a
+  // comma is part of a sentence), then the rest (after " · ") smaller
+  function answerLines(f, c, d) {
     const [main, ...more] = String(f.aRaw).split(' · ');
-    const opts = optionsOf(main);
+    const opts = VOCAB.has(d.id) ? optionsOf(main) : [main];
     if (opts.length < 2) return `<div class="kcard-a size-${sizeClass(f.aRaw)}" lang="${f.aLang}">${f.a}${speakBtn(f.aSay)}</div>`;
     const html = (t) => (f.aLang === 'de' ? nounsHtml(rich(t), c) : rich(t));
     const longest = opts.reduce((a, b) => (b.length > a.length ? b : a));
     const size = opts.length >= 3 && sizeClass(longest) === 'xl' ? 'l' : sizeClass(longest); // three or more lines: one size smaller
-    return `<div class="kcard-a kcard-opts size-${size}" lang="${f.aLang}">${opts.map((o) => `<span class="opt">${html(o)}</span>`).join('')}${speakBtn(f.aSay)}</div>${more.length ? `<p class="kcard-ahint" lang="${f.aLang}">${rich(more.join(' · '))}</p>` : ''}`;
+    return `<div class="kcard-a kcard-opts size-${size}" lang="${f.aLang}">${opts.map((o, i) => `<span class="opt">${optNum(i)}${html(o)}</span>`).join('')}${speakBtn(f.aSay)}</div>${more.length ? `<p class="kcard-ahint" lang="${f.aLang}">${rich(more.join(' · '))}</p>` : ''}`;
+  }
+  // the number of the translation each example is for, when every example matches one (else no numbers)
+  function exampleNumbers(c, d) {
+    if (!VOCAB.has(d.id) || !c.exs || c.exs.length < 2) return null;
+    const norm = (s) => plain(String(s)).replace(/,\s*(¨?-|=).*$/, '').trim().toLowerCase();
+    const opts = optionsOf(String(d.aLang === 'de' ? c.a : c.q).split(' · ')[0]).map(norm);
+    const nums = c.exs.map(([o]) => opts.indexOf(norm(o)));
+    return opts.length > 1 && nums.every((n) => n >= 0) ? nums : null;
   }
 
   function sessionCounts() {
@@ -2687,7 +2704,7 @@ h1, h2, p { margin: 0; }
     const stripes = mixed && germanUp;
     const gender = !mixed && c.g && (f.qLang === 'de' || back) ? ` g-${c.g}` : '';
     const stripeBlock = (say) =>
-      `<div class="stripes">${c.gl.map(([w, g], i) => `<div class="stripe s-${g}"><span class="stripe-word" lang="de">${nounsHtml(esc(w), { gl: [[w, g]] })}${i === 0 ? speakBtn(say) : ''}</span></div>`).join('')}</div>`;
+      `<div class="stripes">${c.gl.map(([w, g], i) => `<div class="stripe s-${g}"><span class="stripe-word" lang="de">${optNum(i)}${nounsHtml(esc(w), { gl: [[w, g]] })}${i === 0 ? speakBtn(say) : ''}</span></div>`).join('')}</div>`;
     const extras = mixed ? facesOf({ ...c, g: undefined }, d, u.rev).extras : f.extras;
     const note = S.notes[wordOf(id)];
     const myNote = note && !note.del ? `<p class="kcard-mynote" lang="es"><span class="note-label">Tu nota</span>${note.text ? esc(note.text) : 'marcada como problemática'}</p>` : '';
@@ -2698,7 +2715,7 @@ h1, h2, p { margin: 0; }
     if (back) {
       body = stripes
         ? `${stripeBlock(f.aSay)}<div class="kcard-extras">${extras}${myNote}</div>`
-        : `${answerLines(f, c)}${extras}${myNote}`;
+        : `${answerLines(f, c, d)}${extras}${myNote}`;
     } else {
       body = stripes
         ? `${ctx ? `<div class="kcard-extras">${ctx}</div>` : ''}${stripeBlock(f.qSay)}${qHint ? `<div class="kcard-extras">${qHint}</div>` : ''}`
