@@ -1109,6 +1109,20 @@ h1, h2, p { margin: 0; }
 .al-5 { background: var(--al-5); }
 .ex-es .al { color: var(--ink-2); }
 
+/* the same pairs with coloured letters instead of a coloured background (Ajustes › Estudio) */
+:root { --alt-1: #a16207; --alt-2: #6d28d9; --alt-3: #15803d; --alt-4: #0369a1; --alt-5: #be185d; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --alt-1: #fbbf24; --alt-2: #c084fc; --alt-3: #4ade80; --alt-4: #38bdf8; --alt-5: #fb7185; }
+}
+:root[data-theme="dark"] { --alt-1: #fbbf24; --alt-2: #c084fc; --alt-3: #4ade80; --alt-4: #38bdf8; --alt-5: #fb7185; }
+.al.al-text { background: none; padding: 0; }
+.al-text.al-1, .ex-es .al-text.al-1 { color: var(--alt-1); }
+.al-text.al-2, .ex-es .al-text.al-2 { color: var(--alt-2); }
+.al-text.al-3, .ex-es .al-text.al-3 { color: var(--alt-3); }
+.al-text.al-4, .ex-es .al-text.al-4 { color: var(--alt-4); }
+.al-text.al-5, .ex-es .al-text.al-5 { color: var(--alt-5); }
+.pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; }
+
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 </head>

@@ -1111,6 +1111,20 @@ h1, h2, p { margin: 0; }
 .al-4 { background: var(--al-4); }
 .al-5 { background: var(--al-5); }
 .ex-es .al { color: var(--ink-2); }
+
+/* the same pairs with coloured letters instead of a coloured background (Ajustes › Estudio) */
+:root { --alt-1: #a16207; --alt-2: #6d28d9; --alt-3: #15803d; --alt-4: #0369a1; --alt-5: #be185d; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --alt-1: #fbbf24; --alt-2: #c084fc; --alt-3: #4ade80; --alt-4: #38bdf8; --alt-5: #fb7185; }
+}
+:root[data-theme="dark"] { --alt-1: #fbbf24; --alt-2: #c084fc; --alt-3: #4ade80; --alt-4: #38bdf8; --alt-5: #fb7185; }
+.al.al-text { background: none; padding: 0; }
+.al-text.al-1, .ex-es .al-text.al-1 { color: var(--alt-1); }
+.al-text.al-2, .ex-es .al-text.al-2 { color: var(--alt-2); }
+.al-text.al-3, .ex-es .al-text.al-3 { color: var(--alt-3); }
+.al-text.al-4, .ex-es .al-text.al-4 { color: var(--alt-4); }
+.al-text.al-5, .ex-es .al-text.al-5 { color: var(--alt-5); }
+.pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; }
 </style>
 <div id="app" class="app"></div>
 <div id="toast" class="toast" role="status" hidden></div>
@@ -1121,7 +1135,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '4.7.1';
+  const VERSION = '4.8';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -1141,7 +1155,7 @@ h1, h2, p { margin: 0; }
   // dir: which side you see first ('es' Spanish → German, 'de' German → Spanish, 'both');
   // order: new cards drawn at random ('random') or most frequent first ('frequency')
   // sessionSize: cards in each practice batch; shields: streak protectors (you start with 2)
-  const DEFAULTS = { sessionSize: 20, shields: 2, autoSpeak: true, rate: 0.9, voice: '', decks: ['wortschatz'], levels: ['B2'], dir: 'es', order: 'random', dailyGoal: 10, neededRight: 3, theme: '', colorPairs: true, resetAt: 0, updatedAt: 0 };
+  const DEFAULTS = { sessionSize: 20, shields: 2, autoSpeak: true, rate: 0.9, voice: '', decks: ['wortschatz'], levels: ['B2'], dir: 'es', order: 'random', dailyGoal: 10, neededRight: 3, theme: '', pairStyle: 'bg', resetAt: 0, updatedAt: 0 };
   const DIRS = [
     { id: 'es', label: 'ES → DE', hint: 'Ves la palabra en español y la dices en alemán.' },
     { id: 'de', label: 'DE → ES', hint: 'Ves la palabra en alemán y dices qué significa.' },
@@ -2643,14 +2657,17 @@ h1, h2, p { margin: 0; }
 
   // an example with its word-by-word pairs: "{n|…}" marks a word or group; its equivalent in the other sentence has
   // the same n and so the same colour (five colours, then they repeat). Without the setting, plain text.
-  const alignedHtml = (s) =>
-    S.settings.colorPairs === false
+  // how the pairs look (Ajustes › Estudio): coloured background, coloured letters, or none
+  const PAIR_STYLES = ['bg', 'text', 'off'];
+  const pairStyle = () => (PAIR_STYLES.includes(S.settings.pairStyle) ? S.settings.pairStyle : S.settings.colorPairs === false ? 'off' : 'bg');
+  const alignedHtml = (s, style = pairStyle()) =>
+    style === 'off'
       ? rich(s)
       : String(s)
           .split(/(\{\d+\|[^{}]*\})/)
           .map((part) => {
             const m = /^\{(\d+)\|([^{}]*)\}$/.exec(part);
-            return m ? `<span class="al al-${((Number(m[1]) - 1) % 5) + 1}">${rich(m[2])}</span>` : rich(part);
+            return m ? `<span class="al al-${((Number(m[1]) - 1) % 5) + 1}${style === 'text' ? ' al-text' : ''}">${rich(m[2])}</span>` : rich(part);
           })
           .join('');
   function extrasHtml(c, d) {
@@ -2969,7 +2986,17 @@ h1, h2, p { margin: 0; }
             <button class="icon-btn sm" type="button" data-act="needed" data-delta="1" aria-label="Uno más" ${neededRight() >= 10 ? 'disabled' : ''}>+</button>
           </span>
         </div>
-        <label class="switch-row"><span><strong>Colorear las parejas de palabras en los ejemplos</strong><small>Cada palabra o grupo de palabras del ejemplo en alemán y su traducción llevan el mismo color.</small></span><input type="checkbox" data-act="color-pairs" ${st.colorPairs !== false ? 'checked' : ''}></label>
+        <div class="set-group">
+          <strong>Parejas de palabras en los ejemplos</strong>
+          <small class="hint">Cada palabra o grupo del ejemplo en alemán y su traducción llevan el mismo color.</small>
+          ${[
+            ['bg', 'Fondo de color', 'como un rotulador'],
+            ['text', 'Letra de color', 'solo cambia el color de las letras'],
+            ['off', 'Sin colores', 'los ejemplos en texto normal'],
+          ]
+            .map(([v, t, h]) => `<label class="check-row"><input type="radio" name="pairs" data-act="pair-style" value="${v}" ${pairStyle() === v ? 'checked' : ''}><span><b>${t}</b> · ${h}<span class="pair-demo"><span lang="de">${alignedHtml('{1|Ich wohne} {2|in} {3|Madrid}.', v)}</span> <span lang="es">${alignedHtml('{1|Vivo} {2|en} {3|Madrid}.', v)}</span></span></span></label>`)
+            .join('')}
+        </div>
         <div class="set-group">
           <strong>Orden de las tarjetas nuevas</strong>
           ${[
@@ -4037,8 +4064,8 @@ h1, h2, p { margin: 0; }
         S.settings.autoSpeak = el.checked;
         saveSettings();
         break;
-      case 'color-pairs':
-        S.settings.colorPairs = el.checked;
+      case 'pair-style':
+        S.settings.pairStyle = el.value;
         saveSettings();
         break;
       case 'needed':
