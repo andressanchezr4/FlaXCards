@@ -1168,6 +1168,8 @@ h1, h2, p { margin: 0; }
     error: '',
     notice: '',
     authMode: 'login',
+    email: '', // the address typed last, kept for the sign-in form
+    unconfirmed: '', // an account waiting for its confirmation email
     tick: 0,
   };
 
@@ -1189,8 +1191,20 @@ h1, h2, p { margin: 0; }
     'Email not confirmed': 'Confirma primero tu correo (te hemos enviado un enlace).',
     'User already registered': 'Ya hay una cuenta con ese correo.',
     'Failed to fetch': 'Sin conexión con el servidor de la competición.',
+    link_expired: 'El enlace ha caducado o ya se había usado. Entra con tu correo y contraseña; si aún no confirmaste la cuenta, pide otro correo.',
+    'Email rate limit exceeded': 'Se han enviado demasiados correos. Espera un rato y vuelve a intentarlo.',
+    'Error sending confirmation email': 'No se pudo enviar el correo de confirmación. Inténtalo más tarde.',
   };
-  const compMsg = (e) => COMP_ERRORS[(e && e.message) || ''] || (e && e.message) || 'Algo ha fallado.';
+  const compMsg = (e) => {
+    const m = (e && e.message) || '';
+    if (COMP_ERRORS[m]) return COMP_ERRORS[m];
+    if (/only request this after/i.test(m)) return 'Espera un minuto antes de pedir otro correo.';
+    return m || 'Algo ha fallado.';
+  };
+  // where the link of the confirmation email brings the player back: this same page
+  const compHere = () => location.href.split('#')[0].split('?')[0];
+  // the page was opened from that link: the session (or the error) comes in the address
+  const COMP_RETURN = /(^|[#&?])(access_token|error_description)=/.test(location.hash + location.search);
 
   function compClient() {
     if (comp.client) return Promise.resolve(comp.client);
@@ -1260,25 +1274,56 @@ h1, h2, p { margin: 0; }
   async function compAuth(form) {
     const email = form.email.value.trim();
     const password = form.password.value;
+    comp.email = email;
+    comp.unconfirmed = '';
     const c = await compClient();
     if (comp.authMode === 'signup') {
       const username = form.username.value.trim();
       if (!/^[A-Za-z0-9_.-]{3,24}$/.test(username)) throw new Error('invalid_username');
-      const { data, error } = await c.auth.signUp({ email, password, options: { data: { username } } });
+      const { data, error } = await c.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: compHere() } });
       if (error) throw new Error(error.message);
       if (!data.session) {
-        comp.notice = 'Cuenta creada. Te hemos enviado un correo: confirma la dirección y vuelve para entrar.';
+        // the account waits for the email: its link brings the player back here, already signed in
+        comp.notice = `Te hemos enviado un correo a ${email}. Pulsa el enlace que contiene y volverás aquí con la sesión iniciada. Si no lo ves, mira en spam.`;
         comp.authMode = 'login';
         return;
       }
       comp.user = data.session.user;
     } else {
       const { data, error } = await c.auth.signInWithPassword({ email, password });
-      if (error) throw new Error(error.message);
+      if (error) {
+        if (error.message === 'Email not confirmed') comp.unconfirmed = email;
+        throw new Error(error.message);
+      }
       comp.user = data.user;
     }
     comp.notice = '';
     await compLoad();
+  }
+  async function compResend() {
+    const c = await compClient();
+    const { error } = await c.auth.resend({ type: 'signup', email: comp.unconfirmed, options: { emailRedirectTo: compHere() } });
+    if (error) throw new Error(error.message);
+    comp.notice = `Te hemos enviado otro correo a ${comp.unconfirmed}. Pulsa su enlace para confirmar la cuenta.`;
+    comp.unconfirmed = '';
+  }
+  // back from the confirmation email: supabase-js reads the session from the address; then the address is cleaned
+  async function compCheckReturn() {
+    if (!COMP_ON || !COMP_RETURN) return;
+    const params = new URLSearchParams(`${location.hash.slice(1)}&${location.search.slice(1)}`);
+    await compStep(async () => {
+      try {
+        if (params.get('error_description')) throw new Error(params.get('error_code') === 'otp_expired' || /expired|invalid/i.test(params.get('error_description')) ? 'link_expired' : params.get('error_description'));
+        const c = await compClient();
+        const { data } = await c.auth.getSession();
+        comp.user = data && data.session ? data.session.user : null;
+        comp.ready = true;
+        if (!comp.user) throw new Error('link_expired');
+        toast('Correo confirmado: ya has entrado con tu cuenta.');
+      } finally {
+        history.replaceState(history.state, '', compHere());
+      }
+    });
   }
   async function compSignOut() {
     const c = await compClient();
@@ -1475,10 +1520,11 @@ h1, h2, p { margin: 0; }
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
         ${signup ? '<label class="field"><span>Nombre en la clasificación</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="nickname"></label>' : ''}
-        <label class="field"><span>Correo</span><input name="email" type="email" required autocomplete="email"></label>
+        <label class="field"><span>Correo</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>
         <label class="field"><span>Contraseña</span><input name="password" type="password" required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
         <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${signup ? 'Crear cuenta' : 'Entrar'}</button>
       </form>
+      ${comp.unconfirmed ? `<button class="link-btn" type="button" data-act="comp-resend" ${comp.busy ? 'disabled' : ''}>Reenviar el correo de confirmación</button>` : ''}
       <button class="link-btn" type="button" data-act="comp-auth-mode">${signup ? 'Ya tengo cuenta: entrar' : 'No tengo cuenta: crear una'}</button>
     </section>`;
   }
@@ -1553,7 +1599,12 @@ h1, h2, p { margin: 0; }
       case 'comp-auth-mode':
         comp.authMode = comp.authMode === 'signup' ? 'login' : 'signup';
         comp.error = '';
+        comp.notice = '';
+        comp.unconfirmed = '';
         render();
+        return true;
+      case 'comp-resend':
+        compStep(compResend);
         return true;
       case 'comp-play':
         compPlay(el.dataset.mode);
@@ -1636,7 +1687,7 @@ h1, h2, p { margin: 0; }
     compClick(el.dataset.act, el);
   });
 
-  compOpen();
+  compOpen().then(compCheckReturn); // also when opened from the link of the confirmation email
 })();
 </script>
 </body>
