@@ -1087,6 +1087,14 @@ h1, h2, p { margin: 0; }
 .kcard-ex .opt-n { font-size: 0.75rem; margin-right: 0.5em; }
 .stripe-word .opt-n { background: rgba(255, 255, 255, 0.6); }
 
+/* languages screen: light/dark and account buttons on top, the greeting */
+.langs.has-top { padding-top: 12px; gap: 22px; }
+.langs-top { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.chip-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.875rem var(--font-body); cursor: pointer; }
+.chip-btn svg { width: 18px; height: 18px; }
+.langs-hello { margin: 0; text-align: center; font-size: 1.25rem; line-height: 1.3; }
+.theme-btn .half { fill: currentColor; stroke: none; }
+
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 </head>
@@ -1268,6 +1276,11 @@ h1, h2, p { margin: 0; }
     const [status, board] = await Promise.all([rpc('quiz_my_status', { p_week: comp.week }), rpc('quiz_leaderboard', { p_week: comp.week, p_limit: 100, p_offset: 0 })]);
     comp.status = status;
     comp.board = board || [];
+    try {
+      if (status && status.username) localStorage.setItem('flaxcards.username', status.username); // for the greeting
+    } catch (e) {
+      /* asked again next time */
+    }
   }
 
   // ---- account
@@ -1326,9 +1339,19 @@ h1, h2, p { margin: 0; }
     });
   }
   async function compSignOut() {
-    const c = await compClient();
-    await c.auth.signOut();
-    Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null });
+    try {
+      const c = await compClient();
+      await c.auth.signOut();
+    } finally {
+      // signed out on this device even if the server could not be reached
+      try {
+        localStorage.removeItem('flaxcards.competition.auth');
+        localStorage.removeItem('flaxcards.username');
+      } catch (e) {
+        /* nothing kept */
+      }
+      Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null });
+    }
   }
 
   // ---- a game
