@@ -1078,13 +1078,17 @@ h1, h2, p { margin: 0; }
 .rv-a { font-weight: 700; }
 .rv-mark { text-align: center; font-weight: 700; }
 
+/* first screen outside claude.ai: account or guest */
+.langs.welcome { gap: 18px; padding-block: 32px 32px; }
+.comp-link { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
 <div id="toast" class="toast" role="status" hidden></div>
-<script type="application/json" id="competition-config">{"url":"https://xfsgqetssmltgtzgozbe.supabase.co","anonKey":"sb_publishable_6LLGUoD4gSHhRigaDgKmXQ_NNPPYSb_","site":"https://andressanchezr4.github.io/flaxcards-competicion/"}</script>
+<script type="application/json" id="competition-config">{"url":"https://xfsgqetssmltgtzgozbe.supabase.co","anonKey":"sb_publishable_6LLGUoD4gSHhRigaDgKmXQ_NNPPYSb_","site":"https://andressanchezr4.github.io/FlaXCards/"}</script>
 <script>
 /* FlaXCards · Competición semanal on its own page (dist/competicion/). The claude.ai copy of the app cannot reach
    outside servers, so the competition also lives here: the same code as inside the app (competition.js, inlined
@@ -1269,6 +1273,11 @@ h1, h2, p { margin: 0; }
       comp.user = data.user;
     }
     comp.notice = '';
+    try {
+      localStorage.removeItem('flaxcards.guest'); // no longer a guest
+    } catch (e) {
+      /* nothing to forget */
+    }
     await compLoad();
   }
   async function compSignOut() {
@@ -1461,7 +1470,7 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? 'Crear una cuenta' : 'Entrar'}</h2>
-      <p class="hint">Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).${COMP_ALONE ? ' Son 10 preguntas de vocabulario alemán por partida.' : ' Tus tarjetas y tu progreso siguen guardándose igual que hasta ahora.'}</p>
+      <p class="hint">Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).${COMP_ALONE ? ' Son 10 preguntas de vocabulario alemán por partida.' : ' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.'}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
@@ -1603,7 +1612,12 @@ h1, h2, p { margin: 0; }
     const form = e.target.closest('form[data-form]');
     if (!form) return;
     e.preventDefault();
-    if (form.dataset.form === 'comp-auth') compStep(() => compAuth(form));
+    if (form.dataset.form === 'comp-auth') {
+      compStep(async () => {
+        await compAuth(form);
+        if (comp.user && ui.screen === 'welcome') go('langs'); // from the first screen, on to the app
+      });
+    }
     if (form.dataset.form === 'comp-username') {
       compStep(async () => {
         await rpc('quiz_set_username', { p_username: form.username.value.trim() });
