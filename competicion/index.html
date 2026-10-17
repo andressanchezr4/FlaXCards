@@ -1,0 +1,1629 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FlaXCards · Competición semanal</title>
+<meta name="description" content="Competición semanal de vocabulario alemán: 10 preguntas por partida y clasificación de la semana">
+<meta name="theme-color" content="#edf0f4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f141a" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: Karteikasten — the decks are dividers with staggered tabs; studying = one ruled index card (red rule, faint blue lines) with the answer buttons within thumb reach. */
+:root {
+  --desk: #edf0f4;
+  --paper: #ffffff;
+  --paper-2: #f4f6f9;
+  --ink: #17202b;
+  --ink-2: #455161;
+  --muted: #646f80;
+  --line: #d6dce5;
+  --lineatur: #e5edf8;
+  --rotstift: #cf372d;
+  --accent: #1c5cab;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3ecf8;
+  --focus: #1c5cab;
+  --knob: #ffffff;
+  /* Leitner tiers: one ordered blue ramp (new → mastered) */
+  --tier-0: #cde2fb;
+  --tier-1: #86b6ef;
+  --tier-2: #3987e5;
+  --tier-3: #1c5cab;
+  --tier-4: #0d366b;
+  /* answer buttons */
+  --again-bg: #fbe7e5;
+  --again-ink: #9e231b;
+  --hard-bg: #fbefd6;
+  --hard-ink: #744b00;
+  --good-bg: #e1f1e3;
+  --good-ink: #1a6629;
+  --easy-bg: #e3ecf8;
+  --easy-ink: #164a8c;
+  /* grammatical gender: der · die · das · plural */
+  /* nouns like a highlighter: der blue · die pink · das yellow · plural purple (text shade + marker band) */
+  --der: #1747a6;
+  --die: #ad1467;
+  --das: #6b4f00;
+  --plural: #5a3fb0;
+  --hl-m: #d9e6ff;
+  --hl-f: #ffd6ea;
+  --hl-n: #fff0a0;
+  --hl-pl: #e9e2ff;
+  --g-m: #2f6fe0;
+  --g-f: #e0479a;
+  --g-n: #f2c200;
+  --g-pl: #7b5cd6;
+  /* streak flame and the last-7-days boxes (dark blue = daily goal met) */
+  --flame: #ef5a1f;
+  --met-bg: #1c5cab;
+  --met-ink: #ffffff;
+  --miss-bg: #dbe8f8;
+  --miss-ink: #1d3557;
+  /* whole card in the gender colour */
+  --card-m: #dce8ff;
+  --card-f: #ffdbeb;
+  --card-n: #fff0ad;
+  --card-pl: #ebe3ff;
+  /* card tint while swiping */
+  --swipe-yes: #2f9e57;
+  --swipe-no: #d33a2f;
+  --shadow: 0 1px 2px rgba(23, 32, 43, 0.06), 0 4px 14px rgba(23, 32, 43, 0.07);
+  --font-display: "Barlow Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --r-card: 6px;
+  --r-btn: 10px;
+  --r-panel: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --desk: #0f141a;
+    --paper: #19212b;
+    --paper-2: #202a36;
+    --ink: #e7ecf2;
+    --ink-2: #b2bcc9;
+    --muted: #8d99a9;
+    --line: #2d3846;
+    --lineatur: #1f2b3a;
+    --rotstift: #ee675d;
+    --accent: #6da7ec;
+    --accent-ink: #0a1525;
+    --accent-soft: #1c2b40;
+    --focus: #8dbaf0;
+    --knob: #ffffff;
+    --tier-0: #243650;
+    --tier-1: #184f95;
+    --tier-2: #2a78d6;
+    --tier-3: #6da7ec;
+    --tier-4: #b7d3f6;
+    --again-bg: #3a1e1d;
+    --again-ink: #ffaca5;
+    --hard-bg: #382c15;
+    --hard-ink: #f1c76e;
+    --good-bg: #1a3222;
+    --good-ink: #96dba3;
+    --easy-bg: #1c2b40;
+    --easy-ink: #a9c9f5;
+    --der: #a9c8ff;
+    --die: #ffb0d6;
+    --das: #ffe27a;
+    --plural: #cbb8ff;
+    --hl-m: rgba(80, 130, 230, 0.28);
+    --hl-f: rgba(230, 80, 150, 0.28);
+    --hl-n: rgba(230, 190, 40, 0.24);
+    --hl-pl: rgba(140, 110, 230, 0.28);
+    --swipe-yes: #3fb36a;
+    --swipe-no: #e5574e;
+    --flame: #ff8a4c;
+    --card-m: #1d2c47;
+    --card-f: #3b2030;
+    --card-n: #383016;
+    --card-pl: #2b2444;
+    --met-bg: #6da7ec;
+    --met-ink: #0a1525;
+    --miss-bg: #1f3048;
+    --miss-ink: #c9dcf5;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --desk: #0f141a;
+  --paper: #19212b;
+  --paper-2: #202a36;
+  --ink: #e7ecf2;
+  --ink-2: #b2bcc9;
+  --muted: #8d99a9;
+  --line: #2d3846;
+  --lineatur: #1f2b3a;
+  --rotstift: #ee675d;
+  --accent: #6da7ec;
+  --accent-ink: #0a1525;
+  --accent-soft: #1c2b40;
+  --focus: #8dbaf0;
+  --knob: #ffffff;
+  --tier-0: #243650;
+  --tier-1: #184f95;
+  --tier-2: #2a78d6;
+  --tier-3: #6da7ec;
+  --tier-4: #b7d3f6;
+  --again-bg: #3a1e1d;
+  --again-ink: #ffaca5;
+  --hard-bg: #382c15;
+  --hard-ink: #f1c76e;
+  --good-bg: #1a3222;
+  --good-ink: #96dba3;
+  --easy-bg: #1c2b40;
+  --easy-ink: #a9c9f5;
+  --der: #a9c8ff;
+  --die: #ffb0d6;
+  --das: #ffe27a;
+  --plural: #cbb8ff;
+  --hl-m: rgba(80, 130, 230, 0.28);
+  --hl-f: rgba(230, 80, 150, 0.28);
+  --hl-n: rgba(230, 190, 40, 0.24);
+  --hl-pl: rgba(140, 110, 230, 0.28);
+  --swipe-yes: #3fb36a;
+  --swipe-no: #e5574e;
+  --flame: #ff8a4c;
+  --card-m: #1d2c47;
+  --card-f: #3b2030;
+  --card-n: #383016;
+  --card-pl: #2b2444;
+  --met-bg: #6da7ec;
+  --met-ink: #0a1525;
+  --miss-bg: #1f3048;
+  --miss-ink: #c9dcf5;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- base ---------- */
+html {
+  height: 100%;
+  box-sizing: border-box;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+*, *::before, *::after { box-sizing: inherit; }
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: default; opacity: 0.35; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+h1, h2, p { margin: 0; }
+
+.app {
+  max-width: 600px;
+  margin-inline: auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.app.is-study { height: 100%; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 6px;
+}
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.brand-logo { width: 48px; height: 34px; }
+.brand-logo .lg-b1 { opacity: 0.85; }
+.brand-logo .lg-b2 { opacity: 0.55; }
+.brand-logo .lg-b3 { opacity: 0.3; }
+.brand-logo .lg-back { fill: var(--paper-2); stroke: var(--line); stroke-width: 1.5; }
+.brand-logo .lg-card { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1.5; }
+.brand-logo .lg-red { stroke: var(--rotstift); stroke-width: 2; }
+.brand-logo .lg-blue { stroke: var(--tier-1); stroke-width: 1.5; }
+.brand-name {
+  font: 700 1.875rem/1 var(--font-display);
+  letter-spacing: 0.01em;
+}
+.brand-sub { margin-top: 3px; font-size: 0.8125rem; color: var(--muted); }
+.topbar-title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font: 600 1.0625rem/1.2 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-2);
+}
+.icon-btn:hover:not(:disabled) { background: var(--paper); border-color: var(--line); }
+.icon-btn.sm {
+  width: 40px;
+  height: 40px;
+  border-color: var(--line);
+  background: var(--paper-2);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.icon-spacer { width: 44px; height: 44px; flex: none; }
+.prev-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+  height: 40px;
+  padding: 0 12px 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-2);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.prev-btn svg { width: 18px; height: 18px; }
+.prev-btn:hover:not(:disabled) { border-color: var(--ink-2); }
+
+/* ---------- screens ---------- */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-inline: 16px;
+  padding-block: 8px 40px;
+}
+.eyebrow {
+  font: 600 0.8125rem/1.2 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.panel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--paper);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow);
+}
+.hint { font-size: 0.875rem; color: var(--muted); }
+.btn-stack { display: grid; gap: 10px; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 18px;
+  border-radius: var(--r-btn);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+}
+.btn:hover { border-color: var(--ink-2); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { border-color: var(--accent); filter: brightness(1.07); }
+.btn-danger { background: var(--again-bg); border-color: transparent; color: var(--again-ink); }
+.btn-danger:hover { border-color: var(--again-ink); }
+
+/* ---------- level tabs (CEFR) ---------- */
+.levels {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 6px;
+  padding: 5px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+}
+.level {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-2);
+}
+.level:hover:not(.is-on) { background: var(--paper); }
+.level.is-on { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); }
+.level-name { font: 700 1.5rem/1 var(--font-display); letter-spacing: 0.02em; }
+.level-sub { font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.level-badge {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 700 0.8125rem/1.4 var(--font-display);
+  letter-spacing: 0.06em;
+}
+.check-levels { margin-left: auto; font-size: 0.8125rem; color: var(--muted); white-space: nowrap; }
+
+/* ---------- direction of the cards ---------- */
+.dir { display: grid; gap: 6px; }
+.dir-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.dir-opt {
+  min-height: 40px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font: 700 1rem/1.1 var(--font-display);
+  letter-spacing: 0.06em;
+}
+.dir-opt:hover:not(.is-on) { background: var(--paper); }
+.dir-opt.is-on { background: var(--paper); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+.dir-hint { font-size: 0.8125rem; color: var(--muted); }
+
+/* ---------- today ---------- */
+.today {
+  display: grid;
+  gap: 16px;
+  padding: 18px 16px 16px;
+  background: var(--paper);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow);
+}
+.today-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.today-date { font-size: 0.875rem; color: var(--muted); }
+.stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.stat { display: grid; gap: 2px; min-width: 0; }
+.stat-label { font-size: 0.8125rem; color: var(--muted); }
+.stat-value { font-size: 1.875rem; font-weight: 700; line-height: 1.1; }
+.stat-value small { font-size: 0.875rem; font-weight: 400; color: var(--ink-2); }
+.intro { font-size: 0.9375rem; color: var(--ink-2); }
+.all-done { color: var(--ink-2); }
+
+/* progress (Ajustes): words learned per day / week / month against the weekly goal */
+.eyebrow-sm {
+  font: 600 0.75rem/1.2 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.act-read { font-size: 0.875rem; color: var(--ink-2); min-height: 2.6em; }
+.act-axis { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); }
+.goal { display: grid; gap: 6px; }
+/* ---------- start screen: app name + one flag per language ---------- */
+.langs { gap: 30px; padding-block: 44px 40px; }
+.langs-brand { display: grid; justify-items: center; gap: 6px; text-align: center; }
+.langs-brand .brand-logo { width: 104px; height: 74px; }
+.langs-brand .brand-name { font-size: 3.25rem; }
+.langs-brand .brand-sub { font-size: 1rem; }
+.lang-section { display: grid; gap: 12px; }
+.lang-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 220px)); justify-content: center; gap: 12px; }
+.lang-tile {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 20px 12px 16px;
+  text-align: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow);
+}
+.lang-tile:hover { border-color: var(--ink-2); }
+.flag { width: 104px; height: 62px; border-radius: 6px; stroke: none; box-shadow: 0 0 0 1px var(--line), var(--shadow); }
+.lang-name { margin-top: 6px; font: 700 1.625rem/1.1 var(--font-display); }
+.lang-sub { color: var(--ink-2); }
+.lang-stats { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 4px; font-size: 0.8125rem; color: var(--muted); }
+.lang-stats .flame { width: 14px; height: 14px; }
+/* language home: the known words take the place of the app name */
+.home-top { gap: 6px; }
+.home-top .hero { flex: 1; min-width: 0; padding: 0; gap: 10px; }
+.home-top .hero-num { font-size: 2.5rem; }
+.home-top .hero-label { font-size: 1.0625rem; }
+.home-top .hero-label small { font-size: 0.8125rem; }
+.start-top { display: grid; gap: 8px; }
+.hero { display: flex; align-items: center; gap: 14px; padding: 4px 6px; }
+.hero-num { font: 700 3.25rem/1 var(--font-body); color: var(--accent); }
+.hero-label { display: grid; gap: 2px; font-size: 1.1875rem; font-weight: 700; color: var(--ink); }
+.hero-label small { font-size: 0.875rem; font-weight: 400; color: var(--muted); }
+.shields { display: inline-flex; align-items: center; gap: 3px; margin-left: 12px; }
+.shield { width: 18px; height: 18px; fill: var(--accent); stroke: none; }
+.wc .shield { width: 17px; height: 17px; fill: currentColor; }
+.hint .shield { width: 15px; height: 15px; vertical-align: -2px; }
+.start-top .btn-primary { min-height: 60px; font-size: 1.125rem; }
+.practice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.practice-text { display: grid; gap: 4px; min-width: 0; }
+.practice p { min-width: 0; font-size: 0.9375rem; color: var(--ink); }
+.topbar-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+.practice .eyebrow-sm { margin-right: 6px; }
+.pstrip {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+}
+.pstrip:hover { border-color: var(--ink-2); }
+.streak { display: inline-flex; align-items: center; gap: 4px; font-size: 0.9375rem; color: var(--ink-2); }
+.flame { width: 22px; height: 22px; fill: var(--flame); stroke: none; }
+.stat-label .flame { width: 14px; height: 14px; vertical-align: -2px; }
+.pstrip-lv { font-size: 0.9375rem; color: var(--ink-2); }
+.pstrip-note { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; font-size: 0.8125rem; color: var(--muted); }
+.week-cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.wc {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 5px 2px 6px;
+  border-radius: 8px;
+  background: var(--miss-bg);
+  color: var(--miss-ink);
+}
+.wc small { font-size: 0.6875rem; opacity: 0.85; }
+.wc b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.wc.is-met { background: var(--met-bg); color: var(--met-ink); }
+.wc.is-today { box-shadow: inset 0 0 0 2px var(--ink-2); }
+.wc-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--miss-bg); margin-left: 6px; }
+.wc-key.is-met { background: var(--met-bg); margin-left: 0; }
+.pstrip-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; font-size: 0.9375rem; color: var(--ink-2); }
+.pstrip b { color: var(--ink); font-size: 1.125rem; }
+.goal-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
+.goal-head span { font-size: 0.875rem; color: var(--ink-2); }
+.goal-bar { display: block; height: 10px; border-radius: 5px; background: var(--tier-0); overflow: hidden; }
+.goal-bar i { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+.pg-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.pg-chart { display: grid; gap: 8px; }
+.pg-bars { display: flex; align-items: stretch; gap: 2px; height: 130px; border-bottom: 1px solid var(--line); }
+.pg-col {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+}
+.pg-col.is-sel { background: var(--accent-soft); }
+.pg-bar { display: block; width: 100%; max-width: 20px; border-radius: 4px 4px 0 0; background: var(--tier-1); }
+.pg-col.is-current .pg-bar { background: var(--accent); }
+.pg-goal { position: absolute; left: 8%; right: 8%; height: 0; border-top: 2px solid var(--ink-2); }
+.pg-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 0.8125rem; color: var(--ink-2); }
+.pg-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.sw-bar { display: inline-block; width: 12px; height: 10px; border-radius: 2px; background: var(--accent); }
+.sw-goal { display: inline-block; width: 16px; border-top: 2px solid var(--ink-2); }
+.table-wrap { overflow-x: auto; }
+.pg-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.pg-table th, .pg-table td { padding: 7px 4px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.pg-table th:first-child { text-align: left; font-weight: 400; white-space: normal; }
+.pg-table thead th { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+.pg-table tr.is-current th, .pg-table tr.is-current td { font-weight: 700; }
+
+/* progress swatches and meter (deck screen) */
+.sw { display: inline-block; width: 12px; height: 8px; border-radius: 2px; flex: none; }
+.t0 { background: var(--tier-0); }
+.t1 { background: var(--tier-1); }
+.t2 { background: var(--tier-2); }
+.t3 { background: var(--tier-3); }
+.t4 { background: var(--tier-4); }
+.meter { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; }
+.seg { flex: 1 1 0; min-width: 3px; }
+.deck-tab {
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 14px;
+  padding: 4px 11px 3px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  font: 700 0.75rem/1 var(--font-display);
+  letter-spacing: 0.12em;
+  color: var(--ink-2);
+}
+
+/* ---------- deck detail ---------- */
+.deck-hero { position: relative; display: grid; gap: 6px; padding: 18px 16px 16px; margin-top: 18px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; }
+.deck-hero .deck-tab { left: 14px; }
+.deck-hero-title { font: 700 2rem/1.05 var(--font-display); overflow-wrap: anywhere; }
+.deck-hero-sub { color: var(--ink-2); }
+.deck-hero-meta { font-size: 0.875rem; color: var(--muted); }
+.tier-table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
+.tier-table th { text-align: left; font-weight: 400; padding: 7px 0; }
+.tier-table th span { display: inline-flex; align-items: center; gap: 8px; }
+.tier-table td { text-align: right; padding: 7px 0 7px 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.tier-table tr + tr { border-top: 1px solid var(--line); }
+
+/* ---------- switches, fields ---------- */
+.switch-row, .set-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.switch-row > span, .set-row > span:first-child { display: grid; gap: 2px; min-width: 0; }
+.switch-row small, .set-row small { font-size: 0.8125rem; color: var(--muted); }
+.switch-row input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 50px;
+  height: 30px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--line);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.switch-row input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--knob);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+.switch-row input[type="checkbox"]:checked { background: var(--accent); }
+.switch-row input[type="checkbox"]:checked::after { transform: translateX(20px); }
+.stepper { display: inline-flex; align-items: center; gap: 8px; flex: none; }
+.stepper output { min-width: 2.5ch; text-align: center; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.set-group { display: grid; }
+.set-group > strong { padding-bottom: 6px; }
+.check-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.check-row input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+.field { display: grid; gap: 6px; }
+.field > span { display: flex; justify-content: space-between; gap: 8px; font-weight: 700; }
+.field select, .field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-2);
+}
+.field textarea { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 0.8125rem; resize: vertical; }
+.field input[type="range"] { width: 100%; margin: 0; accent-color: var(--accent); }
+.about p + p { margin-top: -4px; }
+
+/* ---------- study ---------- */
+.study {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding-inline: 16px;
+  padding-block: 6px 12px;
+}
+.study-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 14px;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.count { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.count b { color: var(--ink); font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+.count::before { content: ""; width: 8px; height: 8px; border-radius: 50%; }
+.c-new::before { background: var(--tier-2); }
+.c-learn::before { background: var(--rotstift); }
+.c-rev::before { background: var(--good-ink); }
+.card-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 2px 2px 6px;
+}
+.kcard {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--paper);
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--lineatur) 31px, var(--lineatur) 32px);
+  background-position: 0 46px;
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow);
+}
+.kcard[data-act] { cursor: pointer; }
+.kcard.g-m { background-color: var(--card-m); }
+.kcard.g-f { background-color: var(--card-f); }
+.kcard.g-n { background-color: var(--card-n); }
+.kcard.g-pl { background-color: var(--card-pl); }
+.kcard.g-m .kcard-head, .kcard.g-f .kcard-head, .kcard.g-n .kcard-head, .kcard.g-pl .kcard-head { background: transparent; }
+.kcard.g-m .noun, .kcard.g-f .noun, .kcard.g-n .noun, .kcard.g-pl .noun { background: transparent; }
+/* swiping: the card follows the finger, then flies out */
+.study { overflow: hidden; }
+.kcard { position: relative; touch-action: none; transition: transform 0.2s ease; }
+.kcard.is-dragging { transition: none; cursor: grabbing; user-select: none; -webkit-user-select: none; }
+.kcard.is-flying { transition: transform 0.22s ease-in, opacity 0.22s ease-in; opacity: 0; pointer-events: none; }
+.kcard.is-enter { animation: card-in 0.2s ease-out; }
+.kcard.is-turn { animation: card-turn 0.24s ease-out; }
+.card-wrap.is-dragging { overflow: visible; }
+.stamp {
+  position: absolute;
+  z-index: 3;
+  top: 58px;
+  padding: 6px 12px;
+  border: 3px solid currentColor;
+  border-radius: 8px;
+  background: var(--paper);
+  font: 700 1.25rem/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0;
+  pointer-events: none;
+}
+.stamp-know { left: 16px; color: var(--good-ink); transform: rotate(-12deg); }
+.stamp-dont { right: 16px; color: var(--again-ink); transform: rotate(12deg); }
+.stamp-later { left: 50%; top: auto; bottom: 28px; color: var(--easy-ink); transform: translateX(-50%); }
+.kcard::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+.kcard[data-swipe="right"]::after { background: var(--swipe-yes); opacity: calc(var(--p, 0) * 0.55); }
+.kcard[data-swipe="left"]::after { background: var(--swipe-no); opacity: calc(var(--p, 0) * 0.55); }
+.kcard[data-swipe="right"] .stamp-know,
+.kcard[data-swipe="left"] .stamp-dont,
+.kcard[data-swipe="up"] .stamp-later { opacity: var(--p, 0); }
+.link-btn {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.link-btn:hover { background: var(--accent-soft); }
+@keyframes card-turn {
+  from { transform: perspective(1000px) rotateY(-90deg); }
+  to { transform: none; }
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.kcard-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 9px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--rotstift);
+  border-radius: var(--r-card) var(--r-card) 0 0;
+}
+.kcard-deck {
+  min-width: 0;
+  font: 600 0.8125rem/1.2 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kcard-dir {
+  flex: none;
+  margin-left: auto;
+  font: 700 0.8125rem/1 var(--font-display);
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.kcard-status {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.kcard-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px 18px 26px;
+}
+.kcard-q, .kcard-a {
+  font-weight: 700;
+  line-height: 1.22;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  text-wrap: balance;
+}
+.kcard-a { color: var(--accent); }
+.size-xl { font-size: 2.5rem; }
+.size-l { font-size: 2.125rem; }
+.size-m { font-size: 1.65rem; }
+.size-s { font-size: 1.3rem; }
+.kcard-qhint { font-size: 1.0625rem; color: var(--ink-2); }
+.kcard-body { text-align: center; }
+.kcard-body .gender { justify-self: center; }
+.gap {
+  display: inline-block;
+  width: 1.9em;
+  height: 0.9em;
+  margin-inline: 0.12em;
+  border-bottom: 3px solid var(--accent);
+  vertical-align: baseline;
+}
+.kcard-answer {
+  display: grid;
+  gap: 12px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+  animation: rise 0.18s ease-out;
+}
+.kcard-ahint { color: var(--ink-2); }
+.kcard-ex { display: grid; gap: 4px; padding: 10px 12px; background: var(--paper-2); border-radius: 8px; }
+.ex-de { font-size: 1.0625rem; }
+.ex-es { font-size: 0.9375rem; color: var(--muted); }
+.kcard-note { font-size: 0.9375rem; color: var(--ink-2); }
+.note-label {
+  margin-right: 8px;
+  font: 700 0.75rem/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rotstift);
+}
+.speak {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: 8px;
+  padding: 0;
+  vertical-align: middle;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--accent);
+}
+.speak svg { width: 18px; height: 18px; }
+.noun {
+  padding: 0 0.14em;
+  border-radius: 0.22em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.noun-m { color: var(--der); background: var(--hl-m); }
+.noun-f { color: var(--die); background: var(--hl-f); }
+.noun-n { color: var(--das); background: var(--hl-n); }
+.noun-pl { color: var(--plural); background: var(--hl-pl); }
+.gender { display: inline-flex; align-items: center; gap: 7px; font-size: 0.875rem; font-weight: 700; color: var(--ink-2); }
+.gender i { width: 10px; height: 10px; border-radius: 50%; }
+.gender-m i { background: var(--g-m); }
+.gender-f i { background: var(--g-f); }
+.gender-n i { background: var(--g-n); }
+.gender-pl i { background: var(--g-pl); }
+.btn-reveal { min-height: 56px; font-size: 1.0625rem; }
+.act-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.act {
+  min-height: 60px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: var(--r-btn);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.act-no { background: var(--again-bg); color: var(--again-ink); }
+.act-later { background: var(--easy-bg); color: var(--easy-ink); }
+.act-yes { background: var(--good-bg); color: var(--good-ink); }
+.act:hover { box-shadow: inset 0 0 0 2px currentColor; }
+
+/* ---------- done ---------- */
+.done { flex: 1; justify-content: center; }
+.done-card {
+  display: grid;
+  gap: 14px;
+  padding: 22px 18px;
+  background: var(--paper);
+  border-top: 2px solid var(--rotstift);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow);
+}
+.done-title { font: 700 2.5rem/1 var(--font-display); }
+
+/* ---------- browse ---------- */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+}
+.search:focus-within { border-color: var(--accent); }
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 1rem;
+}
+.card-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.card-item { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; }
+.card-item-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.ci-q { grid-column: 1; font-weight: 700; overflow-wrap: anywhere; }
+.ci-a { grid-column: 1; color: var(--accent); overflow-wrap: anywhere; }
+.ci-state { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.card-item-body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.empty { padding: 24px 12px; text-align: center; color: var(--muted); }
+
+/* ---------- footer, toast ---------- */
+.foot { display: grid; gap: 4px; font-size: 0.8125rem; color: var(--muted); text-align: center; }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 10;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.9375rem;
+  box-shadow: var(--shadow);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Leitner boxes (trophy screen): one row per box; the bar is the share of the fullest box */
+.boxes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bx { display: grid; grid-template-columns: 7.25rem minmax(0, 1fr) 3.25rem; align-items: center; gap: 10px; }
+.bx-name { display: grid; font-size: 0.9375rem; line-height: 1.2; color: var(--ink); }
+.bx-name small { font-size: 0.75rem; color: var(--muted); }
+.bx-bar { display: block; height: 10px; border-radius: 5px; background: var(--paper-2); overflow: hidden; }
+.bx-bar i { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--accent); }
+.bx-learn .bx-bar i { background: var(--again-ink); }
+.bx-n { text-align: right; font-size: 1rem; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* gender stripes: vocabulary nouns of different genders, one stripe per noun in its colour */
+.kcard-body.has-stripes { padding: 0; gap: 0; justify-content: flex-start; }
+.stripes { display: flex; flex-direction: column; flex: 1 0 auto; min-height: 200px; }
+.stripe { flex: 1; display: grid; place-items: center; min-height: 72px; padding: 10px 16px; }
+.stripe-word { font-size: 1.85rem; font-weight: 700; line-height: 1.2; overflow-wrap: break-word; }
+.stripe-word .noun { background: transparent; }
+.s-m { background: var(--card-m); }
+.s-f { background: var(--card-f); }
+.s-n { background: var(--card-n); }
+.s-pl { background: var(--card-pl); }
+.kcard-extras { display: grid; gap: 10px; padding: 14px 18px 22px; }
+
+/* the six present-tense forms of a verb */
+.kcard-conj { list-style: none; margin: 0; padding: 8px 16px; justify-self: center; align-self: center; display: grid; gap: 1px; text-align: left; font-size: 1.0625rem; background: var(--paper-2); border-radius: 8px; }
+
+/* "!" during practice and its sheet */
+.flag-btn { width: 40px; height: 40px; border-color: var(--line); background: var(--paper); font: 800 1.25rem/1 var(--font-display); color: var(--ink-2); }
+.flag-btn.is-on { background: var(--again-bg); border-color: transparent; color: var(--again-ink); }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 40; background: rgb(10 15 25 / 0.45); }
+.sheet { position: fixed; left: 50%; bottom: 0; z-index: 41; transform: translateX(-50%); width: min(560px, 100%); display: grid; gap: 12px; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); background: var(--paper); border-radius: 18px 18px 0 0; box-shadow: var(--shadow); }
+.sheet-title { font: 700 1.25rem/1.2 var(--font-display); }
+.sheet-card { color: var(--ink-2); }
+.sheet .field textarea { font-family: inherit; font-size: 1rem; }
+.btn-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.kcard-mynote { font-size: 0.9375rem; color: var(--again-ink); }
+.notes-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.notes-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.notes-list p { margin-top: 4px; font-size: 0.9375rem; color: var(--ink-2); }
+
+/* what an answer did, for a moment over the next card */
+.study { position: relative; }
+.flash { position: absolute; bottom: 96px; left: 50%; z-index: 6; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 999px; font-size: 0.9375rem; font-weight: 700; width: max-content; max-width: calc(100% - 32px); text-align: center; pointer-events: none; box-shadow: var(--shadow); animation: flash 1.9s ease forwards; }
+.flash.is-new { background: var(--met-bg); color: var(--met-ink); }
+.flash.is-review { background: var(--paper); color: var(--ink-2); border: 1px solid var(--line); }
+.flash.is-step { background: var(--miss-bg); color: var(--miss-ink); }
+@keyframes flash {
+  0% { opacity: 0; transform: translate(-50%, -6px); }
+  12%, 75% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); }
+}
+
+/* context above an ambiguous word */
+.kcard-ctx { margin: 0 0 -4px; font-size: 1rem; font-style: italic; color: var(--muted); }
+.note-fixed { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--met-bg); color: var(--met-ink); font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+
+/* several translations, one per line; one example per translation */
+.kcard-opts { display: grid; justify-items: center; gap: 2px; }
+.kcard-opts .opt { display: block; }
+.kcard-exs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+
+/* weekly competition */
+.comp-entry { display: flex; align-items: center; gap: 12px; text-align: left; text-decoration: none; }
+.comp-entry svg { width: 28px; height: 28px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.comp-entry span { display: grid; }
+.comp-entry small { font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
+.comp-error { padding: 10px 12px; border-radius: 10px; background: var(--again-bg); color: var(--again-ink); font-weight: 700; }
+.comp-notice { padding: 10px 12px; border-radius: 10px; background: var(--miss-bg); color: var(--miss-ink); }
+.comp-wait { text-align: center; color: var(--muted); padding: 24px 0; }
+.comp-form { display: grid; gap: 10px; }
+.comp-form input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; }
+.comp-badge { padding: 4px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; white-space: nowrap; }
+.comp-badge.is-counted { background: var(--met-bg); color: var(--met-ink); }
+.comp-badge.is-practice { background: var(--paper-2); color: var(--ink-2); border: 1px solid var(--line); }
+.btn small { display: block; font-weight: 400; font-size: 0.8125rem; opacity: 0.85; }
+.board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.board { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.board-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; }
+.board-row:nth-child(odd) { background: var(--paper-2); }
+.board-row.is-me { background: var(--accent-soft); font-weight: 700; }
+.board-rank { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 700; }
+.board-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-pts { font-variant-numeric: tabular-nums; font-weight: 700; }
+.board-me { font-weight: 700; color: var(--accent); }
+.weeks { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.9375rem; color: var(--ink-2); }
+.quiz { display: flex; flex-direction: column; gap: 12px; min-height: 100%; padding: 6px 16px 16px; }
+.quiz-meta { display: flex; gap: 10px; align-items: center; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 700; }
+.quiz-timer { padding: 3px 8px; border-radius: 6px; background: var(--paper-2); }
+.quiz-timer.is-late { background: var(--again-bg); color: var(--again-ink); }
+.quiz-body { display: grid; gap: 14px; }
+.quiz-q { font-size: 1.85rem; line-height: 1.2; text-align: center; padding: 18px 8px; overflow-wrap: break-word; }
+.quiz-options { display: grid; gap: 10px; }
+.quiz-opt { min-height: 56px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1.25; text-align: left; }
+.quiz-opt.is-chosen { border-color: var(--accent); background: var(--accent-soft); }
+.quiz-opt:disabled { opacity: 0.6; }
+.quiz-nav { display: flex; justify-content: space-between; }
+.review { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.review li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 1.5rem; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--paper-2); }
+.review .is-bad { background: var(--again-bg); }
+.rv-a { font-weight: 700; }
+.rv-mark { text-align: center; font-weight: 700; }
+
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+</style>
+</head>
+<body>
+<div id="app" class="app"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<script type="application/json" id="competition-config">{"url":"https://xfsgqetssmltgtzgozbe.supabase.co","anonKey":"sb_publishable_6LLGUoD4gSHhRigaDgKmXQ_NNPPYSb_","site":"https://andressanchezr4.github.io/flaxcards-competicion/"}</script>
+<script>
+/* FlaXCards · Competición semanal on its own page (dist/competicion/). The claude.ai copy of the app cannot reach
+   outside servers, so the competition also lives here: the same code as inside the app (competition.js, inlined
+   at the mark below), with just the few helpers it needs. No decks and no study data: the questions come from
+   the server. */
+(() => {
+  'use strict';
+
+  const COMP_ALONE = true;
+  const DAY = 86400000;
+  const ICON = {
+    back: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>',
+    close: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  };
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+  const fmtInt = (n) => n.toLocaleString('es-ES');
+  const stat = (label, value, unit) =>
+    `<div class="stat"><span class="stat-label">${label}</span><span class="stat-value">${value}${unit ? ` <small>${unit}</small>` : ''}</span></div>`;
+  const ui = { screen: 'compete', abandonOpen: false };
+  const app = document.getElementById('app');
+  let toastTimer = 0;
+
+  function render() {
+    app.className = `app is-${ui.screen}`;
+    app.innerHTML = (VIEWS[ui.screen] || VIEWS.compete)();
+  }
+  function go(screen) {
+    ui.screen = screen;
+    render();
+    window.scrollTo(0, 0);
+  }
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.hidden = true;
+    }, 4000);
+  }
+
+    // ---------------------------------------------------------------- weekly competition (Supabase)
+  // Quizzes of 10 vocabulary questions. Competitive games add points to a weekly world ranking (Monday to Sunday,
+  // Europe/Madrid); practice games do not. Everything that decides the result lives on the server (see the
+  // competition/ folder): the questions, which option is right, the score, the daily limit and the ranking. The
+  // app only shows the questions and sends the options chosen. The connection data come from the build
+  // (competition/config.json); without them this part says what is missing.
+  const COMP_CFG = (() => {
+    try {
+      return JSON.parse((document.getElementById('competition-config') || {}).textContent || '{}');
+    } catch (e) {
+      return {};
+    }
+  })();
+  const COMP_ON = !!(COMP_CFG.url && COMP_CFG.anonKey);
+  const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  const comp = {
+    client: null,
+    loading: null,
+    user: null,
+    ready: false, // the session has been checked
+    status: null, // quiz_my_status of the week on screen
+    board: null, // the ranking on screen
+    week: null, // null = this week; else a past Monday
+    weeks: null,
+    game: null, // the game being played (questions without the right answers)
+    answers: {}, // question id → option id
+    index: 0,
+    result: null,
+    busy: false,
+    error: '',
+    notice: '',
+    authMode: 'login',
+    tick: 0,
+  };
+
+  const COMP_ERRORS = {
+    daily_limit: 'Ya has jugado tus partidas puntuables de hoy. Puedes seguir en modo práctica: no suma puntos.',
+    active_session: 'Tienes una partida puntuable abierta. Continúala o abandónala.',
+    session_expired: 'Se acabaron los 10 minutos: esta partida no suma puntos.',
+    session_closed: 'Esa partida ya está cerrada.',
+    session_not_found: 'No se encuentra esa partida.',
+    rate_limited: 'Demasiadas partidas seguidas. Espera un rato.',
+    not_authenticated: 'Inicia sesión para jugar.',
+    not_enough_questions: 'El servidor todavía no tiene preguntas suficientes.',
+    invalid_answers: 'Las respuestas no son válidas.',
+    username_taken: 'Ese nombre ya lo usa otra persona.',
+    invalid_username: 'El nombre debe tener de 3 a 24 letras, números o «_ . -».',
+    profile_missing: 'Tu cuenta no tiene perfil todavía. Vuelve a entrar.',
+    load_failed: 'No se pudo cargar la conexión con el servidor de la competición.',
+    'Invalid login credentials': 'Correo o contraseña incorrectos.',
+    'Email not confirmed': 'Confirma primero tu correo (te hemos enviado un enlace).',
+    'User already registered': 'Ya hay una cuenta con ese correo.',
+    'Failed to fetch': 'Sin conexión con el servidor de la competición.',
+  };
+  const compMsg = (e) => COMP_ERRORS[(e && e.message) || ''] || (e && e.message) || 'Algo ha fallado.';
+
+  function compClient() {
+    if (comp.client) return Promise.resolve(comp.client);
+    if (!comp.loading) {
+      comp.loading = new Promise((resolve, reject) => {
+        const done = () => {
+          try {
+            comp.client = window.supabase.createClient(COMP_CFG.url, COMP_CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'flaxcards.competition.auth' } });
+            resolve(comp.client);
+          } catch (e) {
+            reject(new Error('load_failed'));
+          }
+        };
+        if (window.supabase && window.supabase.createClient) return done();
+        const s = document.createElement('script');
+        s.src = SUPABASE_JS;
+        s.onload = done;
+        s.onerror = () => reject(new Error('load_failed'));
+        document.head.appendChild(s);
+      }).catch((e) => {
+        comp.loading = null;
+        throw e;
+      });
+    }
+    return comp.loading;
+  }
+  async function rpc(fn, args) {
+    const c = await compClient();
+    const { data, error } = await c.rpc(fn, args || {});
+    if (error) throw new Error(error.message || 'error');
+    return data;
+  }
+  // a step that talks to the server: one at a time, errors shown on screen
+  async function compStep(fn) {
+    if (comp.busy) return;
+    comp.busy = true;
+    comp.error = '';
+    render();
+    try {
+      await fn();
+    } catch (e) {
+      comp.error = compMsg(e);
+    } finally {
+      comp.busy = false;
+      render();
+    }
+  }
+
+  async function compOpen() {
+    go('compete');
+    if (!COMP_ON) return;
+    await compStep(async () => {
+      const c = await compClient();
+      const { data } = await c.auth.getSession();
+      comp.user = data && data.session ? data.session.user : null;
+      comp.ready = true;
+      if (comp.user) await compLoad();
+    });
+  }
+  async function compLoad() {
+    const [status, board] = await Promise.all([rpc('quiz_my_status', { p_week: comp.week }), rpc('quiz_leaderboard', { p_week: comp.week, p_limit: 100, p_offset: 0 })]);
+    comp.status = status;
+    comp.board = board || [];
+  }
+
+  // ---- account
+  async function compAuth(form) {
+    const email = form.email.value.trim();
+    const password = form.password.value;
+    const c = await compClient();
+    if (comp.authMode === 'signup') {
+      const username = form.username.value.trim();
+      if (!/^[A-Za-z0-9_.-]{3,24}$/.test(username)) throw new Error('invalid_username');
+      const { data, error } = await c.auth.signUp({ email, password, options: { data: { username } } });
+      if (error) throw new Error(error.message);
+      if (!data.session) {
+        comp.notice = 'Cuenta creada. Te hemos enviado un correo: confirma la dirección y vuelve para entrar.';
+        comp.authMode = 'login';
+        return;
+      }
+      comp.user = data.session.user;
+    } else {
+      const { data, error } = await c.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(error.message);
+      comp.user = data.user;
+    }
+    comp.notice = '';
+    await compLoad();
+  }
+  async function compSignOut() {
+    const c = await compClient();
+    await c.auth.signOut();
+    Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null });
+  }
+
+  // ---- a game
+  const savedKey = (id) => `flaxcards.quiz.${id}`;
+  function saveAnswers() {
+    try {
+      if (comp.game) localStorage.setItem(savedKey(comp.game.session_id), JSON.stringify(comp.answers));
+    } catch (e) {
+      /* the answers are kept in memory anyway */
+    }
+  }
+  function beginGame(game) {
+    comp.game = game;
+    comp.result = null;
+    try {
+      comp.answers = JSON.parse(localStorage.getItem(savedKey(game.session_id)) || '{}');
+    } catch (e) {
+      comp.answers = {};
+    }
+    const firstOpen = game.questions.findIndex((q) => !comp.answers[q.question_id]);
+    comp.index = firstOpen < 0 ? game.questions.length - 1 : firstOpen;
+    go('quiz');
+    clearInterval(comp.tick);
+    comp.tick = setInterval(quizTick, 1000);
+  }
+  async function compPlay(mode) {
+    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode })));
+  }
+  async function compResume(id) {
+    await compStep(async () => beginGame(await rpc('quiz_resume', { p_session: id })));
+  }
+  function quizSecondsLeft() {
+    return comp.game ? Math.floor((new Date(comp.game.expires_at).getTime() - Date.now()) / 1000) : 0;
+  }
+  // the clock on screen; with 5 seconds left the answers are sent, so they arrive in time
+  function quizTick() {
+    if (ui.screen !== 'quiz' || !comp.game) return clearInterval(comp.tick);
+    const left = quizSecondsLeft();
+    const el = document.getElementById('quiz-timer');
+    if (el) {
+      el.textContent = fmtClock(left);
+      el.classList.toggle('is-late', left <= 60);
+    }
+    if (left <= 5 && !comp.busy) compFinish();
+  }
+  function compChoose(optionId) {
+    const q = comp.game.questions[comp.index];
+    comp.answers[q.question_id] = Number(optionId);
+    saveAnswers();
+    if (comp.index < comp.game.questions.length - 1) {
+      comp.index += 1;
+      render();
+    } else compFinish();
+  }
+  async function compFinish() {
+    const game = comp.game;
+    if (!game) return;
+    clearInterval(comp.tick);
+    const answers = game.questions.map((q) => ({ question_id: q.question_id, option_id: comp.answers[q.question_id] || null }));
+    await compStep(async () => {
+      try {
+        comp.result = await rpc('quiz_finish', { p_session: game.session_id, p_answers: answers });
+      } finally {
+        try {
+          localStorage.removeItem(savedKey(game.session_id));
+        } catch (e) {
+          /* nothing to clean */
+        }
+      }
+      comp.game = null;
+      go('quizResult');
+      await compLoad().catch(() => {});
+    });
+    if (comp.game && comp.error) {
+      comp.game = null; // expired or closed: back to the menu with the message
+      go('compete');
+    }
+  }
+  async function compAbandon() {
+    const game = comp.game;
+    if (!game) return go('compete');
+    clearInterval(comp.tick);
+    await compStep(async () => {
+      await rpc('quiz_abandon', { p_session: game.session_id });
+      comp.game = null;
+      go('compete');
+      await compLoad();
+    });
+  }
+
+  // ---- formatting
+  function fmtClock(s) {
+    const v = Math.max(0, s);
+    return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}`;
+  }
+  function fmtLeft(s) {
+    if (s == null) return '';
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    return d ? `${d} d ${h} h` : h ? `${h} h ${m} min` : `${m} min`;
+  }
+  function fmtWeek(monday) {
+    const a = new Date(`${monday}T12:00:00`);
+    const b = new Date(a.getTime() + 6 * DAY);
+    const f = (x) => x.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    return `${f(a)} – ${f(b)}`;
+  }
+
+  // ---- screens
+  function compTop(title, back = 'home') {
+    // on its own page there is no home to go back to
+    return `<header class="topbar">
+      ${COMP_ALONE && back === 'home' ? '<span class="icon-spacer"></span>' : `<button class="icon-btn" type="button" data-act="${back}" aria-label="Volver">${ICON.back}</button>`}
+      <span class="topbar-title">${title}</span>
+      <span class="icon-spacer"></span>
+    </header>`;
+  }
+  const compError = () => (comp.error ? `<p class="comp-error" role="alert">${esc(comp.error)}</p>` : '');
+
+  function viewCompete() {
+    if (!COMP_ON) {
+      return `${compTop('Competición semanal')}
+      <main class="screen"><section class="panel">
+        <h2 class="eyebrow">Aún no está conectada</h2>
+        <p>La competición necesita un servidor propio (un proyecto gratuito de Supabase) que todavía no se ha configurado en esta copia de FlaXCards.</p>
+        <p class="hint">Quien mantiene la app debe crear el proyecto, aplicar <code>competition/supabase/migrations</code>, cargar las preguntas y poner la dirección y la clave pública en <code>competition/config.json</code> antes de generar la app. Todo está explicado en <code>competition/README.md</code>.</p>
+      </section></main>`;
+    }
+    if (!comp.ready) return `${compTop('Competición semanal')}<main class="screen"><p class="comp-wait">Conectando…</p>${compError()}</main>`;
+    if (!comp.user) return `${compTop('Competición semanal')}<main class="screen">${compAuthForm()}</main>`;
+    const st = comp.status || {};
+    const current = !comp.week;
+    const left = st.competitive_left_today ?? 0;
+    const active = st.active_session;
+    const me = (comp.board || []).find((r) => r.is_me);
+    const rows = (comp.board || [])
+      .map((r) => `<li class="board-row${r.is_me ? ' is-me' : ''}"><span class="board-rank">${r.rank}</span><span class="board-name">${esc(r.username)}</span><span class="board-pts">${fmtInt(r.total_points)}</span></li>`)
+      .join('');
+    const playBlock = current
+      ? `<div class="btn-stack">
+          ${active ? `<button class="btn btn-primary" type="button" data-act="comp-resume" data-id="${esc(active.session_id)}">Continuar la partida puntuable</button><button class="btn" type="button" data-act="comp-abandon-open" data-id="${esc(active.session_id)}">Abandonarla (no suma puntos)</button>` : ''}
+          ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 5} hoy)</small></button>` : ''}
+          <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>Jugar en práctica <small>(no suma puntos)</small></button>
+        </div>
+        <p class="hint">${left > 0 ? `Cada partida: 10 preguntas y 10 minutos. Acierto +10, fallo o sin responder −5 (de 0 a 100 puntos). Puedes jugar ${st.rules ? st.rules.daily_limit : 5} partidas puntuables al día; empezar una ya la gasta.` : 'Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.'}</p>`
+      : '';
+    return `${compTop('Competición semanal')}
+    <main class="screen">
+      ${compError()}
+      <section class="panel comp-week" aria-labelledby="h-week">
+        <h2 class="eyebrow" id="h-week">${current ? 'Esta semana' : 'Semana'} · ${st.week_start ? fmtWeek(st.week_start) : ''}</h2>
+        <div class="stats">
+          ${stat('Tus puntos', fmtInt(st.total_points || 0))}
+          ${stat('Posición', st.rank ? `${fmtInt(st.rank)}<small> de ${fmtInt(st.players || 0)}</small>` : '—')}
+          ${current ? stat('Hoy quedan', `${left}<small> partidas</small>`) : stat('Partidas', fmtInt(st.games_played || 0))}
+        </div>
+        ${current ? `<p class="hint">Cierra en ${fmtLeft(st.seconds_left)} (lunes a las 00:00, hora de España). Como mucho puedes sumar ${fmtInt(st.max_points_left || 0)} puntos más esta semana.</p>` : ''}
+        ${playBlock}
+      </section>
+      <section class="panel" aria-labelledby="h-board">
+        <div class="board-head"><h2 class="eyebrow" id="h-board">Clasificación${current ? '' : ` · ${fmtWeek(comp.week)}`}</h2><button class="link-btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>Actualizar</button></div>
+        ${rows ? `<ol class="board">${rows}</ol>` : '<p class="hint">Nadie ha jugado todavía esta semana. ¡Sé el primero!</p>'}
+        ${st.rank && !me ? `<p class="board-me">Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos</p>` : ''}
+        <div class="btn-row">
+          ${current ? '<button class="btn" type="button" data-act="comp-weeks">Semanas anteriores</button>' : '<button class="btn" type="button" data-act="comp-week" data-week="">Volver a esta semana</button>'}
+        </div>
+        ${comp.weeks ? `<ul class="weeks">${comp.weeks.map((w) => `<li><button class="link-btn" type="button" data-act="comp-week" data-week="${w.week_start}">${fmtWeek(w.week_start)}</button> · ${fmtInt(w.players)} jugadores${w.my_points != null ? ` · tú: ${fmtInt(w.my_points)} puntos, puesto ${w.my_rank}` : ''}</li>`).join('') || '<li>Todavía no hay semanas anteriores.</li>'}</ul>` : ''}
+      </section>
+      <section class="panel" aria-labelledby="h-profile">
+        <h2 class="eyebrow" id="h-profile">Tu perfil</h2>
+        <form class="comp-form" data-form="comp-username">
+          <label class="field"><span>Nombre en la clasificación</span><input name="username" value="${esc(st.username || '')}" minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" required></label>
+          <button class="btn" type="submit" ${comp.busy ? 'disabled' : ''}>Guardar nombre</button>
+        </form>
+        <p class="hint">${esc(comp.user.email || '')}</p>
+        <button class="btn" type="button" data-act="comp-signout">Cerrar sesión</button>
+      </section>
+      ${ui.abandonOpen ? compAbandonSheet() : ''}
+    </main>`;
+  }
+
+  function compAuthForm() {
+    const signup = comp.authMode === 'signup';
+    return `<section class="panel">
+      <h2 class="eyebrow">${signup ? 'Crear una cuenta' : 'Entrar'}</h2>
+      <p class="hint">Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).${COMP_ALONE ? ' Son 10 preguntas de vocabulario alemán por partida.' : ' Tus tarjetas y tu progreso siguen guardándose igual que hasta ahora.'}</p>
+      ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
+      ${compError()}
+      <form class="comp-form" data-form="comp-auth">
+        ${signup ? '<label class="field"><span>Nombre en la clasificación</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="nickname"></label>' : ''}
+        <label class="field"><span>Correo</span><input name="email" type="email" required autocomplete="email"></label>
+        <label class="field"><span>Contraseña</span><input name="password" type="password" required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
+        <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${signup ? 'Crear cuenta' : 'Entrar'}</button>
+      </form>
+      <button class="link-btn" type="button" data-act="comp-auth-mode">${signup ? 'Ya tengo cuenta: entrar' : 'No tengo cuenta: crear una'}</button>
+    </section>`;
+  }
+
+  function viewQuiz() {
+    const g = comp.game;
+    if (!g) return viewCompete();
+    const q = g.questions[comp.index];
+    const chosen = comp.answers[q.question_id];
+    const counted = g.counted;
+    return `<div class="quiz">
+      <header class="study-bar">
+        <button class="icon-btn" type="button" data-act="comp-abandon-open" data-id="${esc(g.session_id)}" aria-label="Abandonar la partida">${ICON.close}</button>
+        <span class="comp-badge ${counted ? 'is-counted' : 'is-practice'}">${counted ? 'Puntuable' : 'Práctica · no suma'}</span>
+        <span class="quiz-meta"><span>${comp.index + 1} / ${g.questions.length}</span><span id="quiz-timer" class="quiz-timer">${fmtClock(quizSecondsLeft())}</span></span>
+      </header>
+      ${compError()}
+      <main class="quiz-body">
+        <p class="eyebrow">¿Cómo se dice en alemán?</p>
+        <h2 class="quiz-q" lang="es">${esc(q.statement)}</h2>
+        <div class="quiz-options">
+          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="de" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
+        </div>
+        <div class="quiz-nav">
+          <button class="link-btn" type="button" data-act="comp-prev" ${comp.index === 0 ? 'disabled' : ''}>‹ Anterior</button>
+          <button class="link-btn" type="button" data-act="comp-skip">${comp.index < g.questions.length - 1 ? 'Saltar ›' : 'Terminar'}</button>
+        </div>
+      </main>
+      ${ui.abandonOpen ? compAbandonSheet() : ''}
+    </div>`;
+  }
+
+  function viewQuizResult() {
+    const r = comp.result;
+    if (!r) return viewCompete();
+    const items = (r.review || [])
+      .map((x) => `<li class="${x.is_correct ? 'is-ok' : 'is-bad'}"><span class="rv-q" lang="es">${esc(x.statement)}</span><span class="rv-a" lang="de">${esc(x.correct_text)}</span><span class="rv-mark">${x.is_correct ? '✓' : x.selected_option_id ? '✗' : '—'}</span></li>`)
+      .join('');
+    return `${compTop('Resultado', 'compete')}
+    <main class="screen">
+      <section class="panel">
+        <p class="eyebrow">${r.counted ? 'Partida puntuable' : 'Partida de práctica · no suma puntos'}</p>
+        <div class="stats">${stat('Aciertos', r.correct)}${stat('Fallos', r.incorrect)}${stat('Puntos', r.score)}</div>
+        ${r.counted ? `<p class="hint">Llevas ${fmtInt(r.week_points || 0)} puntos esta semana${r.rank ? ` y vas en el puesto ${fmtInt(r.rank)}` : ''}.</p>` : '<p class="hint">Las partidas de práctica no cuentan para la clasificación.</p>'}
+        <div class="btn-stack">
+          <button class="btn btn-primary" type="button" data-act="compete">Ver la clasificación</button>
+        </div>
+      </section>
+      <section class="panel"><h2 class="eyebrow">Respuestas</h2><ol class="review">${items}</ol></section>
+    </main>`;
+  }
+
+  function compAbandonSheet() {
+    return `<div class="sheet-backdrop" data-act="comp-abandon-close"></div>
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ab-title">
+        <h2 class="sheet-title" id="ab-title">¿Abandonar la partida?</h2>
+        <p>No sumará puntos${comp.game && !comp.game.counted ? '' : ' y la partida de hoy queda gastada'}.</p>
+        <div class="btn-row">
+          <button class="btn" type="button" data-act="comp-abandon-close">Seguir jugando</button>
+          <button class="btn btn-danger" type="button" data-act="comp-abandon">Abandonar</button>
+        </div>
+      </div>`;
+  }
+
+  // ---- events of this part
+  function compClick(act, el) {
+    switch (act) {
+      case 'compete':
+        comp.result = null;
+        compOpen();
+        return true;
+      case 'comp-auth-mode':
+        comp.authMode = comp.authMode === 'signup' ? 'login' : 'signup';
+        comp.error = '';
+        render();
+        return true;
+      case 'comp-play':
+        compPlay(el.dataset.mode);
+        return true;
+      case 'comp-resume':
+        compResume(el.dataset.id);
+        return true;
+      case 'comp-option':
+        compChoose(el.dataset.id);
+        return true;
+      case 'comp-prev':
+        comp.index = Math.max(0, comp.index - 1);
+        render();
+        return true;
+      case 'comp-skip':
+        if (comp.index < comp.game.questions.length - 1) {
+          comp.index += 1;
+          render();
+        } else compFinish();
+        return true;
+      case 'comp-abandon-open':
+        if (!comp.game && el.dataset.id) comp.game = { session_id: el.dataset.id, counted: true, questions: [] };
+        ui.abandonOpen = true;
+        render();
+        return true;
+      case 'comp-abandon-close':
+        ui.abandonOpen = false;
+        if (comp.game && !comp.game.questions.length) comp.game = null;
+        render();
+        return true;
+      case 'comp-abandon':
+        ui.abandonOpen = false;
+        compAbandon();
+        return true;
+      case 'comp-refresh':
+        compStep(compLoad);
+        return true;
+      case 'comp-weeks':
+        compStep(async () => {
+          const weeks = (await rpc('quiz_weeks', { p_limit: 12 })) || [];
+          comp.weeks = weeks.filter((w) => !comp.status || w.week_start !== comp.status.week_start);
+        });
+        return true;
+      case 'comp-week':
+        comp.week = el.dataset.week || null;
+        compStep(compLoad);
+        return true;
+      case 'comp-signout':
+        compStep(compSignOut);
+        return true;
+      default:
+        return false;
+    }
+  }
+  app.addEventListener('submit', (e) => {
+    const form = e.target.closest('form[data-form]');
+    if (!form) return;
+    e.preventDefault();
+    if (form.dataset.form === 'comp-auth') compStep(() => compAuth(form));
+    if (form.dataset.form === 'comp-username') {
+      compStep(async () => {
+        await rpc('quiz_set_username', { p_username: form.username.value.trim() });
+        await compLoad();
+        toast('Nombre guardado.');
+      });
+    }
+  });
+
+
+  const VIEWS = { compete: viewCompete, quiz: viewQuiz, quizResult: viewQuizResult };
+
+  app.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-act]');
+    if (!el || el.disabled || !app.contains(el)) return;
+    compClick(el.dataset.act, el);
+  });
+
+  compOpen();
+})();
+</script>
+</body>
+</html>
