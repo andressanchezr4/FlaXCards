@@ -1,5 +1,5 @@
 // Service worker for the installable version: the app works offline after the first visit.
-// The build replaces 63f39bdf50 with a hash of the page, so every new version gets a fresh cache.
+// The build replaces 083b7fed3f with a hash of the page, so every new version gets a fresh cache.
 const CACHE = 'karteikasten-__BUILD__';
 const FONTS = 'kk-fonts';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
@@ -27,8 +27,26 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
+  if (url.origin === self.location.origin && req.mode === 'navigate') {
+    // the page: the newest one when there is connection, so an update shows at once; the saved copy without
+    // connection, or when the network takes more than 3 seconds to answer (it is then saved for next time)
+    event.respondWith(
+      caches.open(CACHE).then(async (cache) => {
+        const hit = await cache.match(req, { ignoreSearch: true });
+        const fresh = fetch(req).then((res) => {
+          if (res.ok) cache.put(req, res.clone());
+          return res;
+        });
+        if (!hit) return fresh;
+        const slow = new Promise((resolve) => setTimeout(() => resolve(hit), 3000));
+        return Promise.race([fresh.catch(() => hit), slow]);
+      })
+    );
+    return;
+  }
+
   if (url.origin === self.location.origin) {
-    // the app itself: answer from the cache at once and refresh it in the background
+    // the rest of the app (icons, manifest): answer from the cache at once and refresh it in the background
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {
         const hit = await cache.match(req, { ignoreSearch: true });
