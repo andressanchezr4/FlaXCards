@@ -1094,7 +1094,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '4.2';
+  const VERSION = '4.3';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -3117,11 +3117,6 @@ h1, h2, p { margin: 0; }
       comp.user = data.user;
     }
     comp.notice = '';
-    try {
-      localStorage.removeItem('flaxcards.guest'); // no longer a guest
-    } catch (e) {
-      /* nothing to forget */
-    }
     await compLoad();
   }
   async function compSignOut() {
@@ -3473,33 +3468,37 @@ h1, h2, p { margin: 0; }
 
   // claude.ai does not let this page reach the competition server: there the button gives the link to the public copy
   const compLinksOut = () => framed && !!COMP_CFG.site;
-  // outside claude.ai the app opens with the account screen: enter, create an account or go on as a guest
-  // (guests study as usual but cannot play the competition)
-  const GUEST_KEY = 'flaxcards.guest';
+  // outside claude.ai the app always opens with the account screen, then the languages, then the rest:
+  // enter, create an account or go on as a guest (guests study as usual but cannot play the competition);
+  // when already signed in, it says with which account and goes on
   const accountGate = () => COMP_ON && !framed;
-  const hasSession = () => {
+  const savedSession = () => {
     try {
-      return !!localStorage.getItem('flaxcards.competition.auth');
+      return JSON.parse(localStorage.getItem('flaxcards.competition.auth') || 'null'); // where supabase-js keeps it
     } catch (e) {
-      return false;
+      return null;
     }
   };
-  const guestChosen = () => {
-    try {
-      return localStorage.getItem(GUEST_KEY) === '1';
-    } catch (e) {
-      return false;
-    }
-  };
+  const hasSession = () => !!savedSession();
   function viewWelcome() {
-    return `
-    <main class="screen langs welcome">
-      <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">Tarjetas para aprender idiomas</p></div>
-      ${compAuthForm()}
+    const s = savedSession();
+    const account = s
+      ? `<section class="panel">
+        <h2 class="eyebrow">Tu cuenta</h2>
+        <p>Has entrado como <strong>${esc((s.user && s.user.email) || 'tu cuenta')}</strong>.</p>
+        ${compError()}
+        <button class="btn btn-primary" type="button" data-act="langs">Continuar</button>
+        <button class="link-btn" type="button" data-act="welcome-signout" ${comp.busy ? 'disabled' : ''}>Cerrar sesión o usar otra cuenta</button>
+      </section>`
+      : `${compAuthForm()}
       <section class="panel">
         <button class="btn" type="button" data-act="guest">Seguir como invitado</button>
         <p class="hint">Como invitado estudias igual, pero no puedes jugar la competición semanal. Podrás crear la cuenta más adelante.</p>
-      </section>
+      </section>`;
+    return `
+    <main class="screen langs welcome">
+      <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">Tarjetas para aprender idiomas</p></div>
+      ${account}
     </main>`;
   }
   function compLinkSheet() {
@@ -3767,12 +3766,10 @@ h1, h2, p { margin: 0; }
         go('home');
         break;
       case 'guest':
-        try {
-          localStorage.setItem(GUEST_KEY, '1');
-        } catch (e) {
-          /* asked again next time */
-        }
         go('langs');
+        break;
+      case 'welcome-signout':
+        compStep(compSignOut);
         break;
       case 'comp-link':
       case 'comp-link-close':
@@ -4018,7 +4015,7 @@ h1, h2, p { margin: 0; }
     if (prev.screen && VIEWS[prev.screen] && prev.screen !== 'study' && prev.screen !== 'done') {
       ui.screen = prev.screen;
       ui.deckId = prev.deckId || null;
-    } else if (accountGate() && !hasSession() && !guestChosen()) ui.screen = 'welcome';
+    } else if (accountGate()) ui.screen = 'welcome';
     render();
     if (prev.screen === 'study' && prev.scope) startSession(String(prev.scope).split('/')[0].split('+').every((lv) => LEVELS.includes(lv)) ? prev.scope : levelsKey());
     Sync.init();

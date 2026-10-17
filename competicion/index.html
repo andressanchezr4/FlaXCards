@@ -1273,11 +1273,6 @@ h1, h2, p { margin: 0; }
       comp.user = data.user;
     }
     comp.notice = '';
-    try {
-      localStorage.removeItem('flaxcards.guest'); // no longer a guest
-    } catch (e) {
-      /* nothing to forget */
-    }
     await compLoad();
   }
   async function compSignOut() {
