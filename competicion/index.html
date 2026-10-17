@@ -1095,6 +1095,20 @@ h1, h2, p { margin: 0; }
 .langs-hello { margin: 0; text-align: center; font-size: 1.25rem; line-height: 1.3; }
 .theme-btn .half { fill: currentColor; stroke: none; }
 
+/* examples with their word-by-word pairs: a word or group and its equivalent share a soft marker colour */
+:root { --al-1: #fde68a; --al-2: #bfdbfe; --al-3: #bbf7d0; --al-4: #fbcfe8; --al-5: #ddd6fe; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --al-1: #5c4813; --al-2: #1e3a5f; --al-3: #1d4d33; --al-4: #5b2340; --al-5: #3b2f6b; }
+}
+:root[data-theme="dark"] { --al-1: #5c4813; --al-2: #1e3a5f; --al-3: #1d4d33; --al-4: #5b2340; --al-5: #3b2f6b; }
+.al { padding: 1px 3px; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.al-1 { background: var(--al-1); }
+.al-2 { background: var(--al-2); }
+.al-3 { background: var(--al-3); }
+.al-4 { background: var(--al-4); }
+.al-5 { background: var(--al-5); }
+.ex-es .al { color: var(--ink-2); }
+
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 </head>
