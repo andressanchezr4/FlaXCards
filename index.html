@@ -1146,7 +1146,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.1';
+  const VERSION = '5.2';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -1770,10 +1770,18 @@ h1, h2, p { margin: 0; }
     sess.turn = true; // this render plays the turning animation
     render();
     if (!sess.flipped) Speech.stop();
-    else if (S.settings.autoSpeak) {
-      const { c, d } = unitOf(sess.current);
-      Speech.say(backSpeech(c, d));
-    }
+  }
+  // the word in the language being learnt is read once, when it first comes into view (on the front, or on the
+  // back the first time the card is turned); turning it again is silent, the speaker button repeats it
+  function autoSay() {
+    if (!S.settings.autoSpeak || !sess || !sess.current || sess.said === sess.current) return;
+    const u = unitOf(sess.current);
+    if (!u) return;
+    const f = facesOf(u.c, u.d, u.rev);
+    const text = sess.flipped ? f.aSay : f.qSay;
+    if (!text) return;
+    sess.said = sess.current;
+    Speech.say(text);
   }
 
   // force: a swipe or an arrow key answers even if the answer side was not shown
@@ -1897,6 +1905,7 @@ h1, h2, p { margin: 0; }
     sess.current = h.id;
     sess.revealed = false; // shown again as the first time, not turned
     sess.flipped = false;
+    sess.said = null; // and heard again
     if (ui.screen !== 'study') {
       ui.screen = 'study';
       keepAwake();
@@ -3014,7 +3023,7 @@ h1, h2, p { margin: 0; }
     const st = S.settings;
     const voices = Speech.voices;
     const voiceBlock = Speech.ok
-      ? `<label class="switch-row"><span><strong>${tr('Leer la respuesta en voz alta', 'Read the answer aloud')}</strong><small>${tr(`Al mostrar la respuesta se lee en ${LANG().es.toLowerCase()}.`, `When the answer is shown, it is read out in ${LANG().enName}.`)}</small></span><input type="checkbox" data-act="auto-speak" ${st.autoSpeak ? 'checked' : ''}></label>
+      ? `<label class="switch-row"><span><strong>${tr(`Leer la palabra en ${LANG().es.toLowerCase()}`, `Read the ${LANG().enName} word aloud`)}</strong><small>${tr(`Se oye una vez, en cuanto aparece en la tarjeta. Para oírla otra vez, pulsa el altavoz.`, `It is heard once, as soon as it appears on the card. To hear it again, tap the speaker.`)}</small></span><input type="checkbox" data-act="auto-speak" ${st.autoSpeak ? 'checked' : ''}></label>
         <label class="field"><span>${tr('Velocidad', 'Speed')} <output id="rate-out">${Math.round(st.rate * 100)} %</output></span><input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="${st.rate}"></label>
         <label class="field"><span>${tr(`Voz ${LANG().adj}`, `${LANG().enName} voice`)}</span><select id="voice">
           <option value="">${tr('Automática', 'Automatic')}</option>
@@ -3765,6 +3774,7 @@ h1, h2, p { margin: 0; }
     app.className = `app is-${ui.screen}`;
     app.innerHTML = html;
     if (ui.screen === 'study') {
+      autoSay();
       // a long card must still scroll: then vertical drags scroll and only sideways swipes count
       const wrap = app.querySelector('.card-wrap');
       const card = app.querySelector('.kcard');
