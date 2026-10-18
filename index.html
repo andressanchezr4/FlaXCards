@@ -1125,6 +1125,17 @@ h1, h2, p { margin: 0; }
 .al-text.al-4, .ex-es .al-text.al-4 { color: var(--alt-4); }
 .al-text.al-5, .ex-es .al-text.al-5 { color: var(--alt-5); }
 .pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; }
+
+/* two languages per row; the app language (flags) and light/dark at the top left of the languages screen */
+.lang-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
+.lang-tile { min-width: 0; }
+.lang-grid .flag { width: 84px; height: 50px; }
+.langs-top { justify-content: space-between; }
+.langs-top-left { display: inline-flex; align-items: center; gap: 4px; }
+.ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
+.ui-langs { display: flex; justify-content: center; gap: 10px; }
+.ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
+.ui-lang.is-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); color: var(--ink); }
 </style>
 <div id="app" class="app"></div>
 <div id="toast" class="toast" role="status" hidden></div>
@@ -1135,7 +1146,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.0';
+  const VERSION = '5.1';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -1155,32 +1166,45 @@ h1, h2, p { margin: 0; }
   // dir: which side you see first ('es' Spanish → German, 'de' German → Spanish, 'both');
   // order: new cards drawn at random ('random') or most frequent first ('frequency')
   // sessionSize: cards in each practice batch; shields: streak protectors (you start with 2)
-  const DEFAULTS = { sessionSize: 20, shields: 2, autoSpeak: true, rate: 0.9, voice: '', decks: ['wortschatz'], levels: ['B2'], dir: 'es', order: 'random', dailyGoal: 10, neededRight: 3, theme: '', pairStyle: 'bg', resetAt: 0, updatedAt: 0 };
+  const DEFAULTS = { sessionSize: 20, shields: 2, autoSpeak: true, rate: 0.9, voice: '', decks: ['wortschatz'], levels: ['B2'], dir: 'es', order: 'random', dailyGoal: 10, neededRight: 3, theme: '', pairStyle: 'bg', uiLang: '', resetAt: 0, updatedAt: 0 };
+  // the language of the app itself (its buttons and texts, not the cards): Spanish or English. It is chosen on the
+  // first screen and changed with the flag on the languages screen; tr(es, en) gives each text in it
+  const uiLang = () => (S.settings.uiLang === 'en' ? 'en' : 'es');
+  const tr = (es, en) => (uiLang() === 'en' ? en : es);
+  const LOCALE = () => (uiLang() === 'en' ? 'en-GB' : 'es-ES');
   // 'de' is the name of "the language first" for every language (kept from when there was only German)
   const dirsOf = (L) => [
-    { id: 'es', label: `ES → ${L.code}`, hint: `Ves la palabra en español y la dices en ${L.es.toLowerCase()}.` },
-    { id: 'de', label: `${L.code} → ES`, hint: `Ves la palabra en ${L.es.toLowerCase()} y dices qué significa.` },
-    { id: 'both', label: 'Los dos', hint: 'Cada palabra se practica en los dos sentidos, como dos tarjetas distintas.' },
+    { id: 'es', label: `ES → ${L.code}`, hint: tr(`Ves la palabra en español y la dices en ${L.es.toLowerCase()}.`, `You see the word in Spanish and say it in ${L.enName}.`) },
+    { id: 'de', label: `${L.code} → ES`, hint: tr(`Ves la palabra en ${L.es.toLowerCase()} y dices qué significa.`, `You see the word in ${L.enName} and say what it means.`) },
+    { id: 'both', label: tr('Los dos', 'Both'), hint: tr('Cada palabra se practica en los dos sentidos, como dos tarjetas distintas.', 'Each word is practised in both directions, as two separate cards.') },
   ];
   // languages offered on the start screen, each with its own decks (deck "lang"), voice, main deck and the names
   // of the decks made on the fly
   const LANGUAGES = [
-    { id: 'de', name: 'Deutsch', es: 'Alemán', adj: 'alemana', code: 'DE', speech: 'de-DE', main: 'wortschatz', review: 'Überprüfen', hard: 'Schwierige Wörter', done: ['Gut gemacht!', 'Alles erledigt!'] },
-    { id: 'en', name: 'English', es: 'Inglés', adj: 'inglesa', code: 'EN', speech: 'en-GB', main: 'en-vocabulary', review: 'Review', hard: 'Hard words', done: ['Well done!', 'All done!'] },
+    { id: 'de', name: 'Deutsch', es: 'Alemán', adj: 'alemana', enName: 'German', code: 'DE', speech: 'de-DE', main: 'wortschatz', review: 'Überprüfen', hard: 'Schwierige Wörter', done: ['Gut gemacht!', 'Alles erledigt!'] },
+    { id: 'en', name: 'English', es: 'Inglés', adj: 'inglesa', enName: 'English', code: 'EN', speech: 'en-GB', main: 'en-vocabulary', review: 'Review', hard: 'Hard words', done: ['Well done!', 'All done!'] },
   ];
+  // the app language: the flag of Spain or of the United Kingdom
+  const UI_FLAGS = {
+    es: '<svg class="ui-flag" viewBox="0 0 3 2" aria-hidden="true"><rect width="3" height="2" fill="#AA151B"/><rect width="3" height="1" y="0.5" fill="#F1BF00"/></svg>',
+    en: '<svg class="ui-flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="flag-uk-clip-ui"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#flag-uk-clip-ui)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg>',
+  };
+  const uiChoice = () =>
+    `<div class="ui-langs" role="group" aria-label="${tr('Idioma de la aplicación', 'App language')}">${['es', 'en'].map((l) => `<button type="button" class="ui-lang${uiLang() === l ? ' is-on' : ''}" data-act="ui-lang" data-ui="${l}" aria-pressed="${uiLang() === l}">${UI_FLAGS[l]}<span>${l === 'es' ? 'Español' : 'English'}</span></button>`).join('')}</div>`;
   const FLAGS = {
     de: '<svg class="flag" viewBox="0 0 5 3" aria-hidden="true"><rect width="5" height="1" y="0" fill="#000"/><rect width="5" height="1" y="1" fill="#DD0000"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg>',
     en: '<svg class="flag" viewBox="0 0 60 30" aria-hidden="true"><clipPath id="flag-uk-clip"><path d="M30 15h30v15zv15H0zH0V0zV0h30z"/></clipPath><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M0 0l60 30m0-30L0 30" clip-path="url(#flag-uk-clip)" stroke="#C8102E" stroke-width="4"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></svg>',
   };
   const REV = ':r'; // progress key suffix of the reversed card of a word
+  // [Spanish, English] texts, chosen with tr(...pair) when the screen is drawn
   const TIERS = [
-    { cls: 't0', short: 'Nuevas', long: 'Nuevas (aún sin ver)' },
-    { cls: 't1', short: 'Aprendiendo', long: 'Aprendiendo (vuelven hoy)' },
-    { cls: 't2', short: '< 1 semana', long: 'Vuelven en menos de 1 semana' },
-    { cls: 't3', short: '< 3 semanas', long: 'Vuelven en 1 a 3 semanas' },
-    { cls: 't4', short: 'Dominadas', long: 'Dominadas (3 semanas o más)' },
+    { cls: 't0', short: ['Nuevas', 'New'], long: ['Nuevas (aún sin ver)', 'New (not seen yet)'] },
+    { cls: 't1', short: ['Aprendiendo', 'Learning'], long: ['Aprendiendo (vuelven hoy)', 'Learning (back today)'] },
+    { cls: 't2', short: ['< 1 semana', '< 1 week'], long: ['Vuelven en menos de 1 semana', 'Back in less than 1 week'] },
+    { cls: 't3', short: ['< 3 semanas', '< 3 weeks'], long: ['Vuelven en 1 a 3 semanas', 'Back in 1 to 3 weeks'] },
+    { cls: 't4', short: ['Dominadas', 'Mastered'], long: ['Dominadas (3 semanas o más)', 'Mastered (3 weeks or more)'] },
   ];
-  const GENDER = { m: 'der · masculino', f: 'die · femenino', n: 'das · neutro', pl: 'die · plural' };
+  const GENDER = { m: ['der · masculino', 'der · masculine'], f: ['die · femenino', 'die · feminine'], n: ['das · neutro', 'das · neuter'], pl: ['die · plural', 'die · plural'] };
 
   const ICON = {
     gear: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
@@ -1308,11 +1332,11 @@ h1, h2, p { margin: 0; }
   const dayKey = (n) => new Date(n * DAY + ROLLOVER).toISOString().slice(0, 10);
   function fmtDay(n, opts) {
     const [y, m, d] = dayKey(n).split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString('es-ES', opts);
+    return new Date(y, m - 1, d).toLocaleDateString(LOCALE(), opts);
   }
   const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
   const clamp = (x, lo, hi) => Math.min(hi, Math.max(lo, x));
-  const fmtNum = (x) => (Math.round(x * 10) / 10).toLocaleString('es-ES');
+  const fmtNum = (x) => (Math.round(x * 10) / 10).toLocaleString(LOCALE());
   const logPeek = (n) => S.log[dayKey(n)] || { r: 0, n: 0, a: 0, x: 0 };
   function logOf(n) {
     const k = dayKey(n);
@@ -1393,21 +1417,21 @@ h1, h2, p { margin: 0; }
   }
 
   function fmtDays(d) {
-    if (d <= 1) return '1 día';
-    if (d < 31) return `${d} días`;
+    if (d <= 1) return tr('1 día', '1 day');
+    if (d < 31) return tr(`${d} días`, `${d} days`);
     if (d < 365) {
       const x = d / 30.4;
-      return `${fmtNum(x)} ${fmtNum(x) === '1' ? 'mes' : 'meses'}`;
+      return `${fmtNum(x)} ${fmtNum(x) === '1' ? tr('mes', 'month') : tr('meses', 'months')}`;
     }
     const y = d / 365;
-    return `${fmtNum(y)} ${fmtNum(y) === '1' ? 'año' : 'años'}`;
+    return `${fmtNum(y)} ${fmtNum(y) === '1' ? tr('año', 'year') : tr('años', 'years')}`;
   }
 
   function stateLabel(st, today) {
-    if (!st) return 'Nueva';
-    if (st.s !== 2) return 'Aprendiendo';
-    if (st.d <= today) return `Caja ${boxOf(st)} · toca hoy`;
-    return `Caja ${boxOf(st)} · en ${fmtDays(st.d - today)}`;
+    if (!st) return tr('Nueva', 'New');
+    if (st.s !== 2) return tr('Aprendiendo', 'Learning');
+    if (st.d <= today) return tr(`Caja ${boxOf(st)} · toca hoy`, `Box ${boxOf(st)} · due today`);
+    return tr(`Caja ${boxOf(st)} · en ${fmtDays(st.d - today)}`, `Box ${boxOf(st)} · in ${fmtDays(st.d - today)}`);
   }
 
   // ---------------------------------------------------------------- counts
@@ -1586,7 +1610,7 @@ h1, h2, p { margin: 0; }
     if (run > 0 && run % SHIELD_EVERY === 0 && S.settings.shields < MAX_SHIELDS) {
       S.settings.shields += 1;
       saveSettings();
-      toast(`¡${run} días seguidos! Ganas un protector de racha (tienes ${S.settings.shields}).`);
+      toast(tr(`¡${run} días seguidos! Ganas un protector de racha (tienes ${S.settings.shields}).`, `${run} days in a row! You earn a streak shield (you have ${S.settings.shields}).`));
     }
   }
   // the days missed since you last studied are covered with protectors, if there are enough for all of them
@@ -1603,7 +1627,7 @@ h1, h2, p { margin: 0; }
     saveSettings();
     persist(null, true);
     const left = S.settings.shields;
-    toast(`Has usado ${gap} ${gap === 1 ? 'protector' : 'protectores'} de racha y tu racha sigue viva. Te ${left === 1 ? 'queda' : 'quedan'} ${left}.`);
+    toast(tr(`Has usado ${gap} ${gap === 1 ? 'protector' : 'protectores'} de racha y tu racha sigue viva. Te ${left === 1 ? 'queda' : 'quedan'} ${left}.`, `You used ${gap} streak ${gap === 1 ? 'shield' : 'shields'} and your streak lives on. You have ${left} left.`));
   }
 
   // ---------------------------------------------------------------- study session
@@ -1783,10 +1807,10 @@ h1, h2, p { margin: 0; }
     if (madeKnown) sess.newKnown += 1;
     if (reviewOk) sess.reviewsOk += 1;
     sess.flash =
-      g === 1 ? (wasKnown ? { cls: 'is-step', text: `Deja de contar como conocida hasta ${neededRight()} aciertos seguidos` } : null)
-      : madeKnown ? { cls: 'is-new', text: curLevels().includes(c.level || unitOf(id).d.level) ? '+1 palabra conocida' : `+1 palabra conocida de ${levelName(c.level || unitOf(id).d.level)} (no es de tus niveles)` }
-      : reviewOk ? { cls: 'is-review', text: prev && prev.s === 2 && prev.d > today ? `Repaso extra acertado · sigue en la caja ${boxOf(st)}` : `Repaso acertado · pasa a la caja ${boxOf(st)}` }
-      : st.f ? { cls: 'is-step', text: `Acierto ${st.ok || 0}/${neededRight()}: con ${neededRight()} seguidos será conocida` }
+      g === 1 ? (wasKnown ? { cls: 'is-step', text: tr(`Deja de contar como conocida hasta ${neededRight()} aciertos seguidos`, `No longer counts as known until ${neededRight()} right in a row`) } : null)
+      : madeKnown ? { cls: 'is-new', text: curLevels().includes(c.level || unitOf(id).d.level) ? tr('+1 palabra conocida', '+1 known word') : tr(`+1 palabra conocida de ${levelName(c.level || unitOf(id).d.level)} (no es de tus niveles)`, `+1 known word from ${levelName(c.level || unitOf(id).d.level)} (not one of your levels)`) }
+      : reviewOk ? { cls: 'is-review', text: prev && prev.s === 2 && prev.d > today ? tr(`Repaso extra acertado · sigue en la caja ${boxOf(st)}`, `Extra review right · stays in box ${boxOf(st)}`) : tr(`Repaso acertado · pasa a la caja ${boxOf(st)}`, `Review right · moves up to box ${boxOf(st)}`) }
+      : st.f ? { cls: 'is-step', text: tr(`Acierto ${st.ok || 0}/${neededRight()}: con ${neededRight()} seguidos será conocida`, `Right ${st.ok || 0}/${neededRight()}: ${neededRight()} in a row and it counts as known`) }
       : null;
     sess.history.push({ id, prev, fromMain, g, day: today, madeKnown, reviewOk });
     if (sess.history.length > 30) sess.history.shift();
@@ -2110,13 +2134,13 @@ h1, h2, p { margin: 0; }
   function syncLabel() {
     switch (Sync.state) {
       case 'cloud':
-        return 'Tu progreso se guarda en tu cuenta de Claude y se sincroniza entre dispositivos.';
+        return tr('Tu progreso se guarda en tu cuenta de Claude y se sincroniza entre dispositivos.', 'Your progress is saved to your Claude account and synced across devices.');
       case 'connecting':
-        return 'Conectando con tu cuenta para guardar el progreso…';
+        return tr('Conectando con tu cuenta para guardar el progreso…', 'Connecting to your account to save your progress…');
       case 'error':
-        return 'No se pudo guardar en tu cuenta; de momento el progreso se guarda en este navegador.';
+        return tr('No se pudo guardar en tu cuenta; de momento el progreso se guarda en este navegador.', 'Could not save to your account; for now your progress is saved in this browser.');
       default:
-        return 'Tu progreso se guarda en este navegador.';
+        return tr('Tu progreso se guarda en este navegador.', 'Your progress is saved in this browser.');
     }
   }
 
@@ -2133,7 +2157,7 @@ h1, h2, p { margin: 0; }
       }
     };
     try {
-      navigator.clipboard.writeText(text).then(() => toast('Copia guardada en el portapapeles. Pégala en una nota o un correo para conservarla.'), fallback);
+      navigator.clipboard.writeText(text).then(() => toast(tr('Copia guardada en el portapapeles. Pégala en una nota o un correo para conservarla.', 'Backup copied to the clipboard. Paste it into a note or an email to keep it.')), fallback);
     } catch (e) {
       fallback();
     }
@@ -2147,7 +2171,7 @@ h1, h2, p { margin: 0; }
       data = null;
     }
     if (!data || data.app !== 'karteikasten' || !data.cards || typeof data.cards !== 'object') {
-      toast('Ese texto no es una copia de FlaXCards. Pega el texto completo que copiaste.');
+      toast(tr('Ese texto no es una copia de FlaXCards. Pega el texto completo que copiaste.', 'That text is not a FlaXCards backup. Paste the whole text you copied.'));
       return;
     }
     let n = 0;
@@ -2174,7 +2198,7 @@ h1, h2, p { margin: 0; }
     Sync.mark('log');
     ui.importOpen = false;
     render();
-    toast(`Copia restaurada: ${n} ${n === 1 ? 'tarjeta actualizada' : 'tarjetas actualizadas'}.`);
+    toast(tr(`Copia restaurada: ${n} ${n === 1 ? 'tarjeta actualizada' : 'tarjetas actualizadas'}.`, `Backup restored: ${n} ${n === 1 ? 'card updated' : 'cards updated'}.`));
   }
   function doReset() {
     if (!ui.confirmReset) {
@@ -2194,7 +2218,7 @@ h1, h2, p { margin: 0; }
     ALL_DECKS.forEach((d) => deckKeys(d).forEach((k) => Sync.mark(k)));
     sess = null;
     render();
-    toast('Progreso borrado: todas las tarjetas vuelven a ser nuevas.');
+    toast(tr('Progreso borrado: todas las tarjetas vuelven a ser nuevas.', 'Progress reset: all cards are new again.'));
   }
   function toggleDeck(id, on) {
     const set = new Set(S.settings.decks);
@@ -2208,7 +2232,7 @@ h1, h2, p { margin: 0; }
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
   // "{n|…}" marks a word or group in an example and its equivalent in the translation (same n); unmark() drops them
   const unmark = (s) => String(s).replace(/\{\d+\|([^{}]*)\}/g, '$1');
-  const rich = (s) => esc(unmark(s)).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/_{3,}/g, '<span class="gap" role="img" aria-label="hueco"></span>');
+  const rich = (s) => esc(unmark(s)).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/_{3,}/g, `<span class="gap" role="img" aria-label="${tr('hueco', 'blank')}"></span>`);
   const plain = (s) =>
     unmark(s)
       .replace(/\*\*/g, '')
@@ -2245,11 +2269,11 @@ h1, h2, p { margin: 0; }
   }
   const frontText = (c, d) => (d.qLang !== 'es' ? nounsHtml(rich(c.q), c) : rich(c.q));
   const answerText = (c, d) => (d.aLang !== 'es' ? nounsHtml(rich(c.a), c) : rich(c.a));
-  const fmtInt = (n) => n.toLocaleString('es-ES');
+  const fmtInt = (n) => n.toLocaleString(LOCALE());
   const frontSpeech = (c, d) => (d.qLang !== 'es' && !NO_FRONT_AUDIO.has(d.id) && !/_{3,}/.test(c.q) ? plain(c.q) : '');
   const backSpeech = (c, d) => c.say || (d.aLang !== 'es' ? plain(c.a) : '');
   const speakBtn = (text) =>
-    Speech.ok && text ? `<button class="speak" type="button" data-act="speak" data-text="${esc(text)}" aria-label="Escuchar en ${LANG().es.toLowerCase()}">${ICON.speaker}</button>` : '';
+    Speech.ok && text ? `<button class="speak" type="button" data-act="speak" data-text="${esc(text)}" aria-label="${tr(`Escuchar en ${LANG().es.toLowerCase()}`, `Listen in ${LANG().enName}`)}">${ICON.speaker}</button>` : '';
 
   // What each side shows: the card as written in the deck (rev = false) or reversed.
   //   reverse "swap": the two sides change places (Spanish ↔ German)
@@ -2303,18 +2327,18 @@ h1, h2, p { margin: 0; }
   const stat = (label, value, unit) =>
     `<div class="stat"><span class="stat-label">${label}</span><span class="stat-value">${value}${unit ? ` <small>${unit}</small>` : ''}</span></div>`;
   function meterHtml(s) {
-    const label = s.tiers.map((n, k) => `${TIERS[k].short}: ${n}`).join(', ');
+    const label = s.tiers.map((n, k) => `${tr(...TIERS[k].short)}: ${n}`).join(', ');
     const segs = s.tiers
-      .map((n, k) => (n ? `<span class="seg ${TIERS[k].cls}" style="flex-grow:${n}" title="${esc(TIERS[k].long)}: ${n}"></span>` : ''))
+      .map((n, k) => (n ? `<span class="seg ${TIERS[k].cls}" style="flex-grow:${n}" title="${esc(tr(...TIERS[k].long))}: ${n}"></span>` : ''))
       .join('');
     return `<span class="meter" role="img" aria-label="${esc(label)}">${segs}</span>`;
   }
   function startButton(scope, p) {
     const { total } = p;
     if (total) {
-      return `<button class="btn btn-primary" type="button" data-act="study" data-scope="${scope}">Empezar · ${total} ${total === 1 ? 'tarjeta' : 'tarjetas'}</button>`;
+      return `<button class="btn btn-primary" type="button" data-act="study" data-scope="${scope}">${tr(`Empezar · ${total} ${total === 1 ? 'tarjeta' : 'tarjetas'}`, `Start · ${total} ${total === 1 ? 'card' : 'cards'}`)}</button>`;
     }
-    return '<p class="all-done">Todo al día: en estos mazos no quedan tarjetas nuevas ni repasos pendientes.</p>';
+    return `<p class="all-done">${tr('Todo al día: en estos mazos no quedan tarjetas nuevas ni repasos pendientes.', 'All caught up: these decks have no new cards or reviews left.')}</p>`;
   }
 
   // ---------------------------------------------------------------- progress (in Ajustes)
@@ -2351,8 +2375,8 @@ h1, h2, p { margin: 0; }
       for (let k = 13; k >= 0; k--) {
         const n = today - k;
         out.push({
-          label: k === 0 ? 'Hoy' : cap(fmtDay(n, { weekday: 'short', day: 'numeric', month: 'short' })),
-          axis: k === 0 ? 'Hoy' : fmtDay(n, { day: 'numeric', month: 'short' }),
+          label: k === 0 ? tr('Hoy', 'Today') : cap(fmtDay(n, { weekday: 'short', day: 'numeric', month: 'short' })),
+          axis: k === 0 ? tr('Hoy', 'Today') : fmtDay(n, { day: 'numeric', month: 'short' }),
           value: by.get(n) || 0,
           goal: goalWeek / 7,
           current: k === 0,
@@ -2363,8 +2387,8 @@ h1, h2, p { margin: 0; }
       for (let k = 11; k >= 0; k--) {
         const from = w0 - 7 * k;
         out.push({
-          label: k === 0 ? 'Esta semana' : `Semana del ${fmtDay(from, { day: 'numeric', month: 'short' })}`,
-          axis: k === 0 ? 'Esta semana' : fmtDay(from, { day: 'numeric', month: 'short' }),
+          label: k === 0 ? tr('Esta semana', 'This week') : tr(`Semana del ${fmtDay(from, { day: 'numeric', month: 'short' })}`, `Week of ${fmtDay(from, { day: 'numeric', month: 'short' })}`),
+          axis: k === 0 ? tr('Esta semana', 'This week') : fmtDay(from, { day: 'numeric', month: 'short' }),
           value: sum(from, from + 6),
           goal: goalWeek,
           current: k === 0,
@@ -2377,8 +2401,8 @@ h1, h2, p { margin: 0; }
         const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
         const from = dayNum(first.getTime());
         out.push({
-          label: k === 0 ? 'Este mes' : cap(first.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })),
-          axis: k === 0 ? 'Este mes' : first.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
+          label: k === 0 ? tr('Este mes', 'This month') : cap(first.toLocaleDateString(LOCALE(), { month: 'long', year: 'numeric' })),
+          axis: k === 0 ? tr('Este mes', 'This month') : first.toLocaleDateString(LOCALE(), { month: 'short', year: '2-digit' }),
           value: sum(from, from + days - 1),
           goal: (goalWeek * days) / 7,
           current: k === 0,
@@ -2390,10 +2414,10 @@ h1, h2, p { margin: 0; }
   const fmtGoal = (g) => (g < 10 && Math.round(g) !== g ? fmtNum(g) : fmtInt(Math.round(g)));
   function diffText(p) {
     const d = p.value - p.goal;
-    if (d >= 0) return d < 0.05 ? 'objetivo cumplido' : `${fmtGoal(d)} más que el objetivo`;
-    return `faltan ${fmtGoal(-d)}`;
+    if (d >= 0) return d < 0.05 ? tr('objetivo cumplido', 'goal met') : tr(`${fmtGoal(d)} más que el objetivo`, `${fmtGoal(d)} over the goal`);
+    return tr(`faltan ${fmtGoal(-d)}`, `${fmtGoal(-d)} to go`);
   }
-  const periodRead = (p) => `${p.label}: ${fmtInt(p.value)} ${p.value === 1 ? 'palabra' : 'palabras'} · objetivo ${fmtGoal(p.goal)} · ${diffText(p)}`;
+  const periodRead = (p) => tr(`${p.label}: ${fmtInt(p.value)} ${p.value === 1 ? 'palabra' : 'palabras'} · objetivo ${fmtGoal(p.goal)} · ${diffText(p)}`, `${p.label}: ${fmtInt(p.value)} ${p.value === 1 ? 'word' : 'words'} · goal ${fmtGoal(p.goal)} · ${diffText(p)}`);
   function bestStreak() {
     const days = Object.keys(S.log)
       .filter((k) => S.log[k].r || S.log[k].p)
@@ -2435,41 +2459,41 @@ h1, h2, p { margin: 0; }
         return `<tr${p.current ? ' class="is-current"' : ''}><th scope="row">${esc(p.label)}</th><td>${fmtInt(p.value)}</td><td>${fmtGoal(p.goal)}</td><td>${d >= 0 ? '+' : '−'}${fmtGoal(Math.abs(d))}</td></tr>`;
       })
       .join('');
-    const unit = { day: 'Día', week: 'Semana', month: 'Mes' }[view];
+    const unit = { day: tr('Día', 'Day'), week: tr('Semana', 'Week'), month: tr('Mes', 'Month') }[view];
     return `
       <section class="panel" aria-labelledby="h-stats">
-        <h2 class="eyebrow" id="h-stats">Tu progreso · ${levelsLabel(curLevels())}</h2>
-        <div class="stats">${stat(`${ICON.flame} Racha`, streak, streak === 1 ? 'día' : 'días')}${stat('Mejor racha', best, best === 1 ? 'día' : 'días')}${stat('Conocidas', fmtInt(levelProgress(curLevels()).known))}${stat('Protectores', S.settings.shields)}</div>
+        <h2 class="eyebrow" id="h-stats">${tr('Tu progreso', 'Your progress')} · ${levelsLabel(curLevels())}</h2>
+        <div class="stats">${stat(`${ICON.flame} ${tr('Racha', 'Streak')}`, streak, streak === 1 ? tr('día', 'day') : tr('días', 'days'))}${stat(tr('Mejor racha', 'Best streak'), best, best === 1 ? tr('día', 'day') : tr('días', 'days'))}${stat(tr('Conocidas', 'Known'), fmtInt(levelProgress(curLevels()).known))}${stat(tr('Protectores', 'Shields'), S.settings.shields)}</div>
         ${leitnerBoxes(today)}
-        <p class="hint">${ICON.shield} <b>Protectores de racha:</b> si un día no estudias, se gasta uno y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).</p>
+        <p class="hint">${ICON.shield} ${tr(`<b>Protectores de racha:</b> si un día no estudias, se gasta uno y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `<b>Streak shields:</b> if you miss a day, one is used up and you keep your streak. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}</p>
         <div class="goal">
-          <div class="goal-head"><strong>Esta semana: ${fmtInt(week.value)} de ${fmtInt(week.goal)} palabras</strong><span>${diffText(week)}</span></div>
-          <span class="goal-bar" role="img" aria-label="${fmtInt(week.value)} de ${fmtInt(week.goal)}"><i style="width:${Math.min(100, (100 * week.value) / Math.max(1, week.goal))}%"></i></span>
+          <div class="goal-head"><strong>${tr(`Esta semana: ${fmtInt(week.value)} de ${fmtInt(week.goal)} palabras`, `This week: ${fmtInt(week.value)} of ${fmtInt(week.goal)} words`)}</strong><span>${diffText(week)}</span></div>
+          <span class="goal-bar" role="img" aria-label="${tr(`${fmtInt(week.value)} de ${fmtInt(week.goal)}`, `${fmtInt(week.value)} of ${fmtInt(week.goal)}`)}"><i style="width:${Math.min(100, (100 * week.value) / Math.max(1, week.goal))}%"></i></span>
         </div>
         <div class="set-row">
-          <span><strong>Objetivo diario</strong><small>Palabras que quieres aprender cada día (a la semana: ${S.settings.dailyGoal * 7}).</small></span>
+          <span><strong>${tr('Objetivo diario', 'Daily goal')}</strong><small>${tr(`Palabras que quieres aprender cada día (a la semana: ${S.settings.dailyGoal * 7}).`, `Words you want to learn each day (per week: ${S.settings.dailyGoal * 7}).`)}</small></span>
           <span class="stepper">
-            <button class="icon-btn sm" type="button" data-act="goal" data-delta="-1" aria-label="Una menos">−</button>
+            <button class="icon-btn sm" type="button" data-act="goal" data-delta="-1" aria-label="${tr('Una menos', 'One fewer')}">−</button>
             <output>${S.settings.dailyGoal}</output>
-            <button class="icon-btn sm" type="button" data-act="goal" data-delta="1" aria-label="Una más">+</button>
+            <button class="icon-btn sm" type="button" data-act="goal" data-delta="1" aria-label="${tr('Una más', 'One more')}">+</button>
           </span>
         </div>
-        <div class="pg-tabs" role="group" aria-label="Ver por">
-          ${[['day', 'Día'], ['week', 'Semana'], ['month', 'Mes']].map(([v, l]) => `<button type="button" class="dir-opt${v === view ? ' is-on' : ''}" data-act="pg-view" data-view="${v}" aria-pressed="${v === view}">${l}</button>`).join('')}
+        <div class="pg-tabs" role="group" aria-label="${tr('Ver por', 'View by')}">
+          ${[['day', tr('Día', 'Day')], ['week', tr('Semana', 'Week')], ['month', tr('Mes', 'Month')]].map(([v, l]) => `<button type="button" class="dir-opt${v === view ? ' is-on' : ''}" data-act="pg-view" data-view="${v}" aria-pressed="${v === view}">${l}</button>`).join('')}
         </div>
         <div class="pg-chart">
           <p class="act-read" id="pg-read">${esc(periodRead(cur))}</p>
           <div class="pg-bars" id="pg-bars">${cols}</div>
           <div class="act-axis"><span>${esc(list[0].axis)}</span><span>${esc(cur.axis)}</span></div>
-          <ul class="pg-legend"><li><i class="sw-bar"></i>Palabras aprendidas</li><li><i class="sw-goal"></i>Objetivo</li></ul>
+          <ul class="pg-legend"><li><i class="sw-bar"></i>${tr('Palabras aprendidas', 'Words learned')}</li><li><i class="sw-goal"></i>${tr('Objetivo', 'Goal')}</li></ul>
         </div>
         <div class="table-wrap">
           <table class="pg-table">
-            <thead><tr><th scope="col">${unit}</th><th scope="col">Aprendidas</th><th scope="col">Objetivo</th><th scope="col">Diferencia</th></tr></thead>
+            <thead><tr><th scope="col">${unit}</th><th scope="col">${tr('Aprendidas', 'Learned')}</th><th scope="col">${tr('Objetivo', 'Goal')}</th><th scope="col">${tr('Diferencia', 'Difference')}</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
-        <p class="hint">Una palabra es <b>conocida</b> si la aciertas a la primera; si la has fallado o la has mandado a «Repasar», necesita ${neededRight()} aciertos seguidos (se cambia en Ajustes). Todas las cifras cuentan lo mismo: las palabras conocidas de los mazos marcados en Ajustes, en los niveles seleccionados en el inicio (${levelsLabel(curLevels())}), igual que el número de arriba y el de la bandera. La gráfica las reparte por el día en que pasaron a ser conocidas; si olvidas una y la vuelves a aprender, cuenta el día nuevo. La racha cuenta todos los días que estudias.</p>
+        <p class="hint">${tr(`Una palabra es <b>conocida</b> si la aciertas a la primera; si la has fallado o la has mandado a «Repasar», necesita ${neededRight()} aciertos seguidos (se cambia en Ajustes). Todas las cifras cuentan lo mismo: las palabras conocidas de los mazos marcados en Ajustes, en los niveles seleccionados en el inicio (${levelsLabel(curLevels())}), igual que el número de arriba y el de la bandera. La gráfica las reparte por el día en que pasaron a ser conocidas; si olvidas una y la vuelves a aprender, cuenta el día nuevo. La racha cuenta todos los días que estudias.`, `A word is <b>known</b> if you get it right the first time; if you have failed it or sent it to ‘Later’, it needs ${neededRight()} right answers in a row (you can change this in Settings). All the figures count the same thing: the known words of the decks ticked in Settings, at the levels selected on the home screen (${levelsLabel(curLevels())}), like the number at the top and the one under the flag. The chart spreads them over the day they became known; if you forget one and learn it again, the new day counts. The streak counts every day you study.`)}</p>
       </section>`;
   }
   // Leitner boxes of the words in the ticked decks of the selected levels (the same words as "conocidas":
@@ -2491,12 +2515,12 @@ h1, h2, p { margin: 0; }
     const max = Math.max(1, ...n);
     const row = (k, name, when) =>
       `<li class="bx${k ? '' : ' bx-learn'}"><span class="bx-name">${name}<small>${when}</small></span><span class="bx-bar"><i style="width:${n[k] ? Math.max(2, (100 * n[k]) / max) : 0}%"></i></span><b class="bx-n">${fmtInt(n[k])}</b></li>`;
-    const every = (ivl) => ({ 1: 'cada día', 7: 'cada semana', 14: 'cada 2 semanas', 30: 'cada mes', 90: 'cada 3 meses' })[ivl] || `cada ${ivl} días`;
-    const rows = BOXES.map((ivl, k) => row(k + 1, `Caja ${k + 1}`, every(ivl))).join('');
+    const every = (ivl) => ({ 1: tr('cada día', 'every day'), 7: tr('cada semana', 'every week'), 14: tr('cada 2 semanas', 'every 2 weeks'), 30: tr('cada mes', 'every month'), 90: tr('cada 3 meses', 'every 3 months') })[ivl] || tr(`cada ${ivl} días`, `every ${ivl} days`);
+    const rows = BOXES.map((ivl, k) => row(k + 1, tr(`Caja ${k + 1}`, `Box ${k + 1}`), every(ivl))).join('');
     return `
-        <h3 class="eyebrow-sm" id="h-boxes">Cajas de Leitner</h3>
-        <ul class="boxes" aria-labelledby="h-boxes">${row(0, 'Por afianzar', `${neededRight()} aciertos seguidos`)}${rows}</ul>
-        <p class="hint">Cada acierto sube la palabra a la caja siguiente y la hace volver más tarde; un fallo la saca de su caja: necesita ${neededRight()} aciertos seguidos y vuelve a empezar en la caja 1.${due ? ` Hoy te ${due === 1 ? 'toca 1 repaso' : `tocan ${fmtInt(due)} repasos`}.` : ''}</p>`;
+        <h3 class="eyebrow-sm" id="h-boxes">${tr('Cajas de Leitner', 'Leitner boxes')}</h3>
+        <ul class="boxes" aria-labelledby="h-boxes">${row(0, tr('Por afianzar', 'To consolidate'), tr(`${neededRight()} aciertos seguidos`, `${neededRight()} right in a row`))}${rows}</ul>
+        <p class="hint">${tr(`Cada acierto sube la palabra a la caja siguiente y la hace volver más tarde; un fallo la saca de su caja: necesita ${neededRight()} aciertos seguidos y vuelve a empezar en la caja 1.${due ? ` Hoy te ${due === 1 ? 'toca 1 repaso' : `tocan ${fmtInt(due)} repasos`}.` : ''}`, `Each right answer moves the word up to the next box and brings it back later; a wrong one takes it out of its box: it needs ${neededRight()} right answers in a row and starts again in box 1.${due ? ` Today you have ${due === 1 ? '1 review' : `${fmtInt(due)} reviews`} due.` : ''}`)}</p>`;
   }
   // a word is known when its last answer, in whichever direction (ES → DE or DE → ES), was right;
   // so the count of known words does not change when you switch the direction of the cards
@@ -2535,19 +2559,19 @@ h1, h2, p { margin: 0; }
       .map((p, i) => {
         const n = today - (6 - i);
         const met = p.value >= goal;
-        const wd = 'DLMXJVS'[dateOf(n).getDay()];
+        const wd = tr('DLMXJVS', 'SMTWTFS')[dateOf(n).getDay()];
         const covered = !!logPeek(n).p;
-        return `<span class="wc${met ? ' is-met' : ''}${i === 6 ? ' is-today' : ''}" title="${esc(p.label)}: ${p.value} de ${goal}${covered ? ' · salvado con un protector' : ''}"><small>${i === 6 ? 'Hoy' : wd}</small><b>${covered ? ICON.shield : fmtInt(p.value)}</b></span>`;
+        return `<span class="wc${met ? ' is-met' : ''}${i === 6 ? ' is-today' : ''}" title="${esc(p.label)}: ${tr(`${p.value} de ${goal}${covered ? ' · salvado con un protector' : ''}`, `${p.value} of ${goal}${covered ? ' · saved by a shield' : ''}`)}"><small>${i === 6 ? tr('Hoy', 'Today') : wd}</small><b>${covered ? ICON.shield : fmtInt(p.value)}</b></span>`;
       })
       .join('');
-    return `<button class="pstrip" type="button" data-act="progress" aria-label="Ver tu progreso: racha de ${streak} días, ${pct} completado en ${levelsLabel(lvs)}">
+    return `<button class="pstrip" type="button" data-act="progress" aria-label="${tr(`Ver tu progreso: racha de ${streak} días, ${pct} completado en ${levelsLabel(lvs)}`, `See your progress: ${streak}-day streak, ${pct} complete in ${levelsLabel(lvs)}`)}">
       <span class="pstrip-row">
-        <span class="streak">${ICON.flame}<b>${streak}</b> ${streak === 1 ? 'día' : 'días'}<span class="shields">${ICON.shield}<b>${S.settings.shields}</b> ${S.settings.shields === 1 ? 'protector de racha' : 'protectores de racha'}</span></span>
-        <span class="pstrip-lv">${levelsLabel(lvs)} · <b>${pct}</b> completado</span>
+        <span class="streak">${ICON.flame}<b>${streak}</b> ${streak === 1 ? tr('día', 'day') : tr('días', 'days')}<span class="shields">${ICON.shield}<b>${S.settings.shields}</b> ${S.settings.shields === 1 ? tr('protector de racha', 'streak shield') : tr('protectores de racha', 'streak shields')}</span></span>
+        <span class="pstrip-lv">${levelsLabel(lvs)} · <b>${pct}</b> ${tr('completado', 'complete')}</span>
       </span>
-      <span class="goal-bar" role="img" aria-label="${fmtInt(known)} de ${fmtInt(total)} conocidas"><i style="width:${known ? Math.max(1.5, share * 100) : 0}%"></i></span>
-      <span class="week-cells" aria-label="Palabras aprendidas los últimos 7 días">${cells}</span>
-      <span class="pstrip-note"><i class="wc-key is-met"></i>objetivo cumplido (${goal} al día) <i class="wc-key"></i>sin cumplir</span>
+      <span class="goal-bar" role="img" aria-label="${tr(`${fmtInt(known)} de ${fmtInt(total)} conocidas`, `${fmtInt(known)} of ${fmtInt(total)} known`)}"><i style="width:${known ? Math.max(1.5, share * 100) : 0}%"></i></span>
+      <span class="week-cells" aria-label="${tr('Palabras aprendidas los últimos 7 días', 'Words learned in the last 7 days')}">${cells}</span>
+      <span class="pstrip-note"><i class="wc-key is-met"></i>${tr(`objetivo cumplido (${goal} al día)`, `goal met (${goal} a day)`)} <i class="wc-key"></i>${tr('sin cumplir', 'not met')}</span>
     </button>`;
   }
   function selectPeriod(i) {
@@ -2560,7 +2584,7 @@ h1, h2, p { margin: 0; }
   // one switch per level; several can be on at once (the general progress bar sums them)
   function levelTabs() {
     const on = curLevels();
-    return `<nav class="levels" aria-label="Niveles">${LEVELS.map((lv) => {
+    return `<nav class="levels" aria-label="${tr('Niveles', 'Levels')}">${LEVELS.map((lv) => {
       const sel = on.includes(lv);
       return `<button class="level${sel ? ' is-on' : ''}" type="button" data-act="level" data-level="${lv}" aria-pressed="${sel}"><span class="level-name">${levelName(lv)}</span></button>`;
     }).join('')}</nav>`;
@@ -2570,10 +2594,10 @@ h1, h2, p { margin: 0; }
     const DIRS = dirsOf(LANG());
     const cur = DIRS.find((x) => x.id === S.settings.dir) || DIRS[0];
     return `<div class="dir">
-      <div class="dir-switch" role="group" aria-label="Sentido de las tarjetas">
+      <div class="dir-switch" role="group" aria-label="${tr('Sentido de las tarjetas', 'Card direction')}">
         ${DIRS.map((x) => `<button type="button" class="dir-opt${x.id === cur.id ? ' is-on' : ''}" data-act="dir" data-dir="${x.id}" aria-pressed="${x.id === cur.id}">${x.label}</button>`).join('')}
       </div>
-      <p class="dir-hint">${cur.hint} Conectores, gramática y «Fehler aus meinen Texten» van siempre igual.</p>
+      <p class="dir-hint">${cur.hint} ${tr('Conectores, gramática y «Fehler aus meinen Texten» van siempre igual.', 'Connectors, grammar and ‘Fehler aus meinen Texten’ always go the same way.')}</p>
     </div>`;
   }
 
@@ -2583,7 +2607,7 @@ h1, h2, p { margin: 0; }
     const { known, total } = levelProgress(lvs);
     return `<div class="hero">
       <span class="hero-num">${fmtInt(known)}</span>
-      <span class="hero-label">${known === 1 ? 'palabra conocida' : 'palabras conocidas'}<small>de ${fmtInt(total)} en ${levelsLabel(lvs)}</small></span>
+      <span class="hero-label">${known === 1 ? tr('palabra conocida', 'known word') : tr('palabras conocidas', 'known words')}<small>${tr(`de ${fmtInt(total)} en ${levelsLabel(lvs)}`, `of ${fmtInt(total)} in ${levelsLabel(lvs)}`)}</small></span>
     </div>`;
   }
 
@@ -2596,21 +2620,21 @@ h1, h2, p { margin: 0; }
       useLang(l.id); // each language with its own decks and levels: the same numbers as inside
       const known = levelProgress(curLevels()).known;
       const cards = DECKS.reduce((n, d) => n + d.cards.length, 0);
-      return `<button class="lang-tile" type="button" data-act="lang" data-lang="${l.id}" aria-label="Practicar ${l.es}">
+      return `<button class="lang-tile" type="button" data-act="lang" data-lang="${l.id}" aria-label="${tr(`Practicar ${l.es}`, `Practise ${l.enName}`)}">
         ${FLAGS[l.id]}
         <span class="lang-name" lang="${l.id}">${l.name}</span>
-        <span class="lang-sub">${l.es}</span>
-        <span class="lang-stats">${fmtInt(cards)} tarjetas</span>
-        <span class="lang-stats">${fmtInt(known)} ${known === 1 ? 'palabra conocida' : 'palabras conocidas'} en ${levelsLabel(curLevels())} · ${ICON.flame}${streak} ${streak === 1 ? 'día' : 'días'}</span>
+        <span class="lang-sub">${tr(l.es, l.enName)}</span>
+        <span class="lang-stats">${fmtInt(cards)} ${tr('tarjetas', 'cards')}</span>
+        <span class="lang-stats">${fmtInt(known)} ${known === 1 ? tr('palabra conocida', 'known word') : tr('palabras conocidas', 'known words')} ${tr('en', 'in')} ${levelsLabel(curLevels())} · ${ICON.flame}${streak} ${streak === 1 ? tr('día', 'day') : tr('días', 'days')}</span>
       </button>`;
     }).join('');
     useLang(shown);
     return `
     <main class="screen langs has-top">
-      <div class="langs-top">${themeBtn()}${accountGate() ? `<button class="chip-btn" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>Cerrar sesión</span>` : `${ICON.login}<span>Entrar</span>`}</button>` : ''}</div>
-      <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">Tarjetas para aprender idiomas</p></div>
+      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span>${accountGate() ? `<button class="chip-btn" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>${tr('Cerrar sesión', 'Sign out')}</span>` : `${ICON.login}<span>${tr('Entrar', 'Sign in')}</span>`}</button>` : ''}</div>
+      <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       <section class="lang-section" aria-labelledby="h-langs">
-        <h2 class="langs-hello" id="h-langs">Hola${accountName() ? ` ${esc(accountName())}` : ''}, ¿qué idioma quieres aprender hoy?</h2>
+        <h2 class="langs-hello" id="h-langs">${tr(`Hola${accountName() ? ` ${esc(accountName())}` : ''}, ¿qué idioma quieres aprender hoy?`, `Hi${accountName() ? ` ${esc(accountName())}` : ''}, which language would you like to learn today?`)}</h2>
         <div class="lang-grid">${tiles}</div>
       </section>
       <footer class="foot"><p class="sync-label">${esc(syncLabel())}</p><p>FlaXCards ${VERSION}</p></footer>
@@ -2626,23 +2650,22 @@ h1, h2, p { margin: 0; }
     const decks = DECKS.filter((d) => lvs.some((lv) => d.slices[lv]));
     return `
     <header class="topbar home-top">
-      <button class="icon-btn" type="button" data-act="langs" aria-label="Volver a los idiomas">${ICON.back}</button>
+      <button class="icon-btn" type="button" data-act="langs" aria-label="${tr('Volver a los idiomas', 'Back to languages')}">${ICON.back}</button>
       ${knownHero(lvs, today)}
       <span class="topbar-actions">
-        ${themeBtn()}
-        <button class="icon-btn" type="button" data-act="progress" aria-label="Tu progreso">${ICON.trophy}</button>
-        <button class="icon-btn" type="button" data-act="settings" aria-label="Ajustes">${ICON.gear}</button>
+        <button class="icon-btn" type="button" data-act="progress" aria-label="${tr('Tu progreso', 'Your progress')}">${ICON.trophy}</button>
+        <button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button>
       </span>
     </header>
     <main class="screen">
       <div class="start-top">
-        ${decks.some(isActive) || fehlerOn() || hardOn() ? startButton(level, p) : '<p class="all-done">No hay ningún mazo marcado para estos niveles.</p><button class="btn" type="button" data-act="settings" data-focus="sec-decks">Elegir mazos en Ajustes</button>'}
+        ${decks.some(isActive) || fehlerOn() || hardOn() ? startButton(level, p) : `<p class="all-done">${tr('No hay ningún mazo marcado para estos niveles.', 'No decks are ticked for these levels.')}</p><button class="btn" type="button" data-act="settings" data-focus="sec-decks">${tr('Elegir mazos en Ajustes', 'Choose decks in Settings')}</button>`}
       </div>
-      ${curLang() !== 'de' ? '' : `<button class="btn comp-entry" type="button" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>Competición semanal<small>${compLinksOut() ? '10 preguntas · se juega en tu página de FlaXCards' : accountGate() && !hasSession() ? 'Entra o crea una cuenta para competir' : '10 preguntas · clasificación de la semana'}</small></span></button>`}
-      ${firstUse ? '<p class="intro">Marca abajo los niveles, elige los mazos en Ajustes y pulsa «Empezar». Desliza la tarjeta a la derecha si te la sabes, a la izquierda si no, y hacia arriba para repasarla en breve.</p>' : ''}
+      ${curLang() !== 'de' ? '' : `<button class="btn comp-entry" type="button" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('10 preguntas · se juega en tu página de FlaXCards', '10 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('10 preguntas · clasificación de la semana', '10 questions · weekly leaderboard')}</small></span></button>`}
+      ${firstUse ? `<p class="intro">${tr('Marca abajo los niveles, elige los mazos en Ajustes y pulsa «Empezar». Desliza la tarjeta a la derecha si te la sabes, a la izquierda si no, y hacia arriba para repasarla en breve.', 'Tick the levels below, choose the decks in Settings and tap ‘Start’. Swipe the card right if you know it, left if you don’t, and up to see it again shortly.')}</p>` : ''}
       ${progressStrip(today)}
       ${levelTabs(today)}
-      <footer class="foot"><p class="sync-label">${esc(syncLabel())}</p><p>Versión ${VERSION}</p></footer>
+      <footer class="foot"><p class="sync-label">${esc(syncLabel())}</p><p>${tr('Versión', 'Version')} ${VERSION}</p></footer>
       ${ui.compLinkOpen ? compLinkSheet() : ''}
     </main>`;
   }
@@ -2660,12 +2683,12 @@ h1, h2, p { margin: 0; }
     const p = pending(`${level}/${d.id}`, today);
     const others = d.levels
       .filter((lv) => !lvs.includes(lv))
-      .map((lv) => `<button class="btn" type="button" data-act="level-add" data-level="${lv}" data-deck="${d.id}">Añadir también sus ${fmtInt(d.slices[lv].length)} tarjetas de ${levelName(lv)}</button>`)
+      .map((lv) => `<button class="btn" type="button" data-act="level-add" data-level="${lv}" data-deck="${d.id}">${tr(`Añadir también sus ${fmtInt(d.slices[lv].length)} tarjetas de ${levelName(lv)}`, `Also add its ${fmtInt(d.slices[lv].length)} ${levelName(lv)} cards`)}</button>`)
       .join('');
     return `
     <header class="topbar">
-      <button class="icon-btn" type="button" data-act="home" aria-label="Volver al inicio">${ICON.back}</button>
-      <span class="topbar-title">Mazo</span>
+      <button class="icon-btn" type="button" data-act="home" aria-label="${tr('Volver al inicio', 'Back to home')}">${ICON.back}</button>
+      <span class="topbar-title">${tr('Mazo', 'Deck')}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
@@ -2673,22 +2696,22 @@ h1, h2, p { margin: 0; }
         <span class="deck-tab" aria-hidden="true">${esc(d.code)}</span>
         <h1 class="deck-hero-title" lang="${d.lang}">${esc(d.title)}</h1>
         <p class="deck-hero-sub">${esc(d.subtitle)}</p>
-        <p class="deck-hero-meta"><span class="level-badge">${levelsLabel(lvs)}</span> ${fmtInt(s.total)} tarjetas · ${esc(d.source)}</p>
+        <p class="deck-hero-meta"><span class="level-badge">${levelsLabel(lvs)}</span> ${fmtInt(s.total)} ${tr('tarjetas', 'cards')} · ${esc(d.source)}</p>
       </section>
       <div class="btn-stack">
         ${startButton(`${level}/${d.id}`, p)}
-        <button class="btn" type="button" data-act="browse" data-id="${d.id}">Ver todas las tarjetas</button>
+        <button class="btn" type="button" data-act="browse" data-id="${d.id}">${tr('Ver todas las tarjetas', 'See all cards')}</button>
         ${others}
       </div>
       <section class="panel" aria-labelledby="h-progress">
-        <h2 class="eyebrow" id="h-progress">Progreso</h2>
+        <h2 class="eyebrow" id="h-progress">${tr('Progreso', 'Progress')}</h2>
         ${meterHtml(s)}
         <table class="tier-table"><tbody>
-          ${s.tiers.map((n, k) => `<tr><th scope="row"><span><i class="sw ${TIERS[k].cls}"></i>${TIERS[k].long}</span></th><td>${n}</td><td>${Math.round((100 * n) / s.total)} %</td></tr>`).join('')}
+          ${s.tiers.map((n, k) => `<tr><th scope="row"><span><i class="sw ${TIERS[k].cls}"></i>${tr(...TIERS[k].long)}</span></th><td>${n}</td><td>${Math.round((100 * n) / s.total)} %</td></tr>`).join('')}
         </tbody></table>
       </section>
       <label class="switch-row panel">
-        <span><strong>Incluir en la práctica</strong><small>Si lo quitas, no entra al pulsar «Empezar» en el inicio; puedes seguir estudiándolo desde aquí.</small></span>
+        <span><strong>${tr('Incluir en la práctica', 'Include in practice')}</strong><small>${tr('Si lo quitas, no entra al pulsar «Empezar» en el inicio; puedes seguir estudiándolo desde aquí.', 'If you untick it, it is left out when you tap ‘Start’ on the home screen; you can still study it from here.')}</small></span>
         <input type="checkbox" id="deck-active" data-act="toggle-deck" data-id="${d.id}" ${isActive(d) ? 'checked' : ''}>
       </label>
     </main>`;
@@ -2710,9 +2733,9 @@ h1, h2, p { margin: 0; }
           })
           .join('');
   function extrasHtml(c, d) {
-    return `${c.g ? `<p class="gender gender-${c.g}"><i></i>${GENDER[c.g]}</p>` : ''}
+    return `${c.g ? `<p class="gender gender-${c.g}"><i></i>${tr(...GENDER[c.g])}</p>` : ''}
       ${c.aHint ? `<p class="kcard-ahint" lang="${d.aLang}">${rich(c.aHint)}</p>` : ''}
-      ${c.conj ? `<ul class="kcard-conj" lang="${d.lang}" aria-label="Presente">${c.conj.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      ${c.conj ? `<ul class="kcard-conj" lang="${d.lang}" aria-label="${tr('Presente', 'Present tense')}">${c.conj.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
       ${
         c.exs
           ? ((nums) => `<ul class="kcard-exs">${c.exs.map(([, de, es], i) => `<li class="kcard-ex"><p class="ex-de" lang="${d.lang}">${nums ? optNum(nums[i]) : ''}${alignedHtml(de)}${speakBtn(plain(de))}</p><p class="ex-es" lang="es">${alignedHtml(es)}</p></li>`).join('')}</ul>`)(exampleNumbers(c, d))
@@ -2720,7 +2743,7 @@ h1, h2, p { margin: 0; }
             ? `<div class="kcard-ex"><p class="ex-de" lang="${d.lang}">${alignedHtml(c.ex)}${speakBtn(plain(c.ex))}</p>${c.exEs ? `<p class="ex-es" lang="es">${alignedHtml(c.exEs)}</p>` : ''}</div>`
             : ''
       }
-      ${c.note ? `<p class="kcard-note" lang="es"><span class="note-label">Tipp</span>${rich(c.note)}</p>` : ''}`;
+      ${c.note ? `<p class="kcard-note" lang="es"><span class="note-label">${d.lang === 'en' ? 'Tip' : 'Tipp'}</span>${rich(c.note)}</p>` : ''}`;
   }
 
   // split a list of translations at the top-level "," and ";" (not inside brackets, nor inside ¡…! or ¿…?):
@@ -2784,7 +2807,7 @@ h1, h2, p { margin: 0; }
     const { c, d } = u;
     const f = facesOf(c, d, u.rev);
     const st = S.cards[id];
-    const status = !st ? 'Nueva' : st.s === 2 ? `Caja ${boxOf(st)}` : st.f ? `Aciertos ${st.ok || 0}/${neededRight()}` : 'Aprendiendo';
+    const status = !st ? tr('Nueva', 'New') : st.s === 2 ? tr(`Caja ${boxOf(st)}`, `Box ${boxOf(st)}`) : st.f ? tr(`Aciertos ${st.ok || 0}/${neededRight()}`, `Right ${st.ok || 0}/${neededRight()}`) : tr('Aprendiendo', 'Learning');
     const k = sessionCounts();
     const back = sess.flipped;
     const turn = sess.turn;
@@ -2804,7 +2827,7 @@ h1, h2, p { margin: 0; }
       `<div class="stripes">${c.gl.map(([w, g], i) => `<div class="stripe s-${g}"><span class="stripe-word" lang="${d.lang}">${optNum(i)}${nounsHtml(esc(w), { gl: [[w, g]] })}${i === 0 ? speakBtn(say) : ''}</span></div>`).join('')}</div>`;
     const extras = mixed ? facesOf({ ...c, g: undefined }, d, u.rev).extras : f.extras;
     const note = S.notes[wordOf(id)];
-    const myNote = note && !note.del ? `<p class="kcard-mynote" lang="es"><span class="note-label">Tu nota</span>${note.text ? esc(note.text) : 'marcada como problemática'}</p>` : '';
+    const myNote = note && !note.del ? `<p class="kcard-mynote" lang="es"><span class="note-label">${tr('Tu nota', 'Your note')}</span>${note.text ? esc(note.text) : tr('marcada como problemática', 'flagged as a problem')}</p>` : '';
     const qHint = f.qHint ? `<p class="kcard-qhint" lang="es">${rich(f.qHint)}</p>` : '';
     // context for a word whose translation depends on it ("Wie geht's?" above "regular"): small, grey, above the word
     const ctx = c.ctx ? `<p class="kcard-ctx">${rich(c.ctx)}</p>` : '';
@@ -2821,29 +2844,29 @@ h1, h2, p { margin: 0; }
     return `
     <div class="study">
       <header class="study-bar">
-        <button class="icon-btn" type="button" data-act="exit" aria-label="Terminar la sesión">${ICON.close}</button>
-        <div class="counts" aria-label="Quedan ${k.n} nuevas, ${k.l} aprendiendo y ${k.r} de repaso">
-          <span class="count c-new"><b>${k.n}</b> nuevas</span>
-          <span class="count c-learn"><b>${k.l}</b> aprendiendo</span>
-          <span class="count c-rev"><b>${k.r}</b> repaso</span>
+        <button class="icon-btn" type="button" data-act="exit" aria-label="${tr('Terminar la sesión', 'End the session')}">${ICON.close}</button>
+        <div class="counts" aria-label="${tr(`Quedan ${k.n} nuevas, ${k.l} aprendiendo y ${k.r} de repaso`, `${k.n} new, ${k.l} learning and ${k.r} review left`)}">
+          <span class="count c-new"><b>${k.n}</b> ${tr('nuevas', 'new')}</span>
+          <span class="count c-learn"><b>${k.l}</b> ${tr('aprendiendo', 'learning')}</span>
+          <span class="count c-rev"><b>${k.r}</b> ${tr('repaso', 'review')}</span>
         </div>
-        <button class="icon-btn flag-btn${myNote ? ' is-on' : ''}" type="button" data-act="flag-open" aria-label="Marcar esta tarjeta como problemática" title="Marcar como problemática">!</button>
-        <button class="prev-btn" type="button" data-act="undo" aria-label="Volver a la tarjeta anterior" ${sess.history.length ? '' : 'disabled'}>${ICON.back}<span>Anterior</span></button>
+        <button class="icon-btn flag-btn${myNote ? ' is-on' : ''}" type="button" data-act="flag-open" aria-label="${tr('Marcar esta tarjeta como problemática', 'Flag this card as a problem')}" title="${tr('Marcar como problemática', 'Flag as a problem')}">!</button>
+        <button class="prev-btn" type="button" data-act="undo" aria-label="${tr('Volver a la tarjeta anterior', 'Back to the previous card')}" ${sess.history.length ? '' : 'disabled'}>${ICON.back}<span>${tr('Anterior', 'Previous')}</span></button>
       </header>
       ${flash ? `<p class="flash ${flash.cls}" role="status">${flash.text}</p>` : ''}
       <div class="card-wrap">
         <article class="kcard${back ? ' is-back' : ''}${enter ? ' is-enter' : ''}${turn ? ' is-turn' : ''}${gender}" data-act="flip">
-          <span class="stamp stamp-know" aria-hidden="true">Me la sé</span>
-          <span class="stamp stamp-dont" aria-hidden="true">No me la sé</span>
-          <span class="stamp stamp-later" aria-hidden="true">Repasar</span>
+          <span class="stamp stamp-know" aria-hidden="true">${tr('Me la sé', 'Know it')}</span>
+          <span class="stamp stamp-dont" aria-hidden="true">${tr('No me la sé', 'Don’t know')}</span>
+          <span class="stamp stamp-later" aria-hidden="true">${tr('Repasar', 'Later')}</span>
           <div class="kcard-head"><span class="kcard-deck" lang="${d.lang}">${esc(d.title)}</span>${reversible(c, d) ? `<span class="kcard-dir">${dirLabel(f)}</span>` : ''}<span class="kcard-status">${status}</span></div>
           <div class="kcard-body${stripes ? ' has-stripes' : ''}">${body}</div>
         </article>
       </div>
       <footer class="act-row">
-        <button class="act act-no" type="button" data-act="throw" data-dir="left"><span aria-hidden="true">←</span> No me la sé</button>
-        <button class="act act-later" type="button" data-act="throw" data-dir="up"><span aria-hidden="true">↑</span> Repasar</button>
-        <button class="act act-yes" type="button" data-act="throw" data-dir="right">Me la sé <span aria-hidden="true">→</span></button>
+        <button class="act act-no" type="button" data-act="throw" data-dir="left"><span aria-hidden="true">←</span> ${tr('No me la sé', 'Don’t know')}</button>
+        <button class="act act-later" type="button" data-act="throw" data-dir="up"><span aria-hidden="true">↑</span> ${tr('Repasar', 'Later')}</button>
+        <button class="act act-yes" type="button" data-act="throw" data-dir="right">${tr('Me la sé', 'Know it')} <span aria-hidden="true">→</span></button>
       </footer>
       ${ui.flagOpen ? flagSheet(c, d, note) : ''}
     </div>`;
@@ -2857,13 +2880,13 @@ h1, h2, p { margin: 0; }
     return `
       <div class="sheet-backdrop" data-act="flag-close"></div>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="flag-title">
-        <h2 class="sheet-title" id="flag-title">Marcar como problemática</h2>
+        <h2 class="sheet-title" id="flag-title">${tr('Marcar como problemática', 'Flag as a problem')}</h2>
         <p class="sheet-card"><span lang="es">${rich(es.split(' · ')[0])}</span> → <strong lang="${curLang()}">${rich(de.split(' · ')[0])}</strong></p>
-        <label class="field"><span>Tu comentario o corrección (opcional)</span><textarea id="flag-text" rows="4" placeholder="Por ejemplo: el plural es «die Vereine»; falta el sentido de…">${esc(text)}</textarea></label>
+        <label class="field"><span>${tr('Tu comentario o corrección (opcional)', 'Your comment or correction (optional)')}</span><textarea id="flag-text" rows="4" placeholder="${tr('Por ejemplo: el plural es «die Vereine»; falta el sentido de…', 'For example: the plural is ‘die Vereine’; the meaning … is missing')}">${esc(text)}</textarea></label>
         <div class="btn-row">
-          ${note && !note.del ? '<button class="btn btn-danger" type="button" data-act="flag-delete">Quitar la marca</button>' : ''}
-          <button class="btn" type="button" data-act="flag-close">Cancelar</button>
-          <button class="btn btn-primary" type="button" data-act="flag-save">Guardar</button>
+          ${note && !note.del ? `<button class="btn btn-danger" type="button" data-act="flag-delete">${tr('Quitar la marca', 'Remove the flag')}</button>` : ''}
+          <button class="btn" type="button" data-act="flag-close">${tr('Cancelar', 'Cancel')}</button>
+          <button class="btn btn-primary" type="button" data-act="flag-save">${tr('Guardar', 'Save')}</button>
         </div>
       </div>`;
   }
@@ -2890,12 +2913,12 @@ h1, h2, p { margin: 0; }
     const marked = Object.entries(S.notes).filter(([, n]) => n && !n.del).sort((a, b) => b[1].t - a[1].t);
     if (!marked.length) return '';
     const items = marked
-      .map(([k, n]) => `<li><div><strong lang="${(CARD.get(k) || { d: { lang: 'de' } }).d.lang}">${rich(String(n.de || '').split(' · ')[0])}</strong> · <span lang="es">${rich(String(n.es || '').split(' · ')[0])}</span>${fixedSince(k, n) ? ' <span class="note-fixed">✓ corregida</span>' : ''}${n.text ? `<p>${esc(n.text)}</p>` : ''}</div><button class="link-btn" type="button" data-act="note-delete" data-id="${esc(k)}">Quitar</button></li>`)
+      .map(([k, n]) => `<li><div><strong lang="${(CARD.get(k) || { d: { lang: 'de' } }).d.lang}">${rich(String(n.de || '').split(' · ')[0])}</strong> · <span lang="es">${rich(String(n.es || '').split(' · ')[0])}</span>${fixedSince(k, n) ? ` <span class="note-fixed">✓ ${tr('corregida', 'corrected')}</span>` : ''}${n.text ? `<p>${esc(n.text)}</p>` : ''}</div><button class="link-btn" type="button" data-act="note-delete" data-id="${esc(k)}">${tr('Quitar', 'Remove')}</button></li>`)
       .join('');
     return `
       <section class="panel" aria-labelledby="h-notes">
-        <h2 class="eyebrow" id="h-notes">Tarjetas marcadas (${marked.length})</h2>
-        <p class="hint">Las que marcaste con «!» durante la práctica, con tu comentario. Se guardan en tu cuenta, así que Claude puede leerlas para corregir las tarjetas.</p>
+        <h2 class="eyebrow" id="h-notes">${tr('Tarjetas marcadas', 'Flagged cards')} (${marked.length})</h2>
+        <p class="hint">${tr('Las que marcaste con «!» durante la práctica, con tu comentario. Se guardan en tu cuenta, así que Claude puede leerlas para corregir las tarjetas.', 'The ones you flagged with ‘!’ during practice, with your comment. They are saved to your account, so Claude can read them to correct the cards.')}</p>
         <ul class="notes-list">${items}</ul>
       </section>`;
   }
@@ -2923,16 +2946,16 @@ h1, h2, p { margin: 0; }
     return `
     <main class="screen done">
       <div class="done-card">
-        <p class="eyebrow">${seen ? 'Sesión terminada' : 'Nada pendiente'}</p>
+        <p class="eyebrow">${seen ? tr('Sesión terminada', 'Session complete') : tr('Nada pendiente', 'Nothing due')}</p>
         <h1 class="done-title" lang="${curLang()}">${LANG().done[seen ? 0 : 1]}</h1>
-        <div class="stats">${stat('Respuestas', seen)}${stat('Nuevas conocidas', newKnown)}${stat('Repasos bien', reviewsOk)}${stat('Mañana', tomorrow)}</div>
-        ${seen ? `<p class="hint"><b>Nuevas conocidas</b> (${newKnown}) son las que suben el contador de palabras conocidas y el del día. <b>Repasos bien</b> (${reviewsOk}) son palabras que ya conocías: suben de caja de Leitner y vuelven más tarde, pero no cuentan otra vez. Acertaste el ${ok} % de las respuestas.</p>` : ''}
-        ${waiting ? `<p class="hint">${waiting === 1 ? 'Te queda 1 palabra' : `Te quedan ${waiting} palabras`} por afianzar: ${waiting === 1 ? 'sale' : 'salen'} al principio de la próxima tanda.</p>` : ''}
+        <div class="stats">${stat(tr('Respuestas', 'Answers'), seen)}${stat(tr('Nuevas conocidas', 'Newly known'), newKnown)}${stat(tr('Repasos bien', 'Reviews right'), reviewsOk)}${stat(tr('Mañana', 'Tomorrow'), tomorrow)}</div>
+        ${seen ? `<p class="hint">${tr(`<b>Nuevas conocidas</b> (${newKnown}) son las que suben el contador de palabras conocidas y el del día. <b>Repasos bien</b> (${reviewsOk}) son palabras que ya conocías: suben de caja de Leitner y vuelven más tarde, pero no cuentan otra vez. Acertaste el ${ok} % de las respuestas.`, `<b>Newly known</b> (${newKnown}) are the words that raise the count of known words and today’s count. <b>Reviews right</b> (${reviewsOk}) are words you already knew: they move up a Leitner box and come back later, but do not count again. You got ${ok}% of your answers right.`)}</p>` : ''}
+        ${waiting ? `<p class="hint">${tr(`${waiting === 1 ? 'Te queda 1 palabra' : `Te quedan ${waiting} palabras`} por afianzar: ${waiting === 1 ? 'sale' : 'salen'} al principio de la próxima tanda.`, `${waiting === 1 ? '1 word' : `${waiting} words`} still to consolidate: ${waiting === 1 ? 'it comes' : 'they come'} first in the next round.`)}</p>` : ''}
       </div>
       <div class="btn-stack">
-        ${more ? `<button class="btn btn-primary" type="button" data-act="study" data-scope="${scope}">Otra tanda</button>` : ''}
-        ${sess && sess.history.length ? '<button class="btn" type="button" data-act="undo">Volver a la tarjeta anterior</button>' : ''}
-        <button class="btn" type="button" data-act="home">Volver al inicio</button>
+        ${more ? `<button class="btn btn-primary" type="button" data-act="study" data-scope="${scope}">${tr('Otra tanda', 'Another round')}</button>` : ''}
+        ${sess && sess.history.length ? `<button class="btn" type="button" data-act="undo">${tr('Volver a la tarjeta anterior', 'Back to the previous card')}</button>` : ''}
+        <button class="btn" type="button" data-act="home">${tr('Volver al inicio', 'Back to home')}</button>
       </div>
     </main>`;
   }
@@ -2946,11 +2969,11 @@ h1, h2, p { margin: 0; }
     const q = norm(ui.browseQuery);
     const cards = cardsIn(d, deckLevels(d));
     const items = cards.filter((c) => !q || norm(unmark([c.q, c.qHint, c.a, c.aHint, c.ex, c.exEs, c.note].filter(Boolean).join(' '))).includes(q));
-    if (!items.length) return `<li class="empty">Ninguna tarjeta contiene «${esc(ui.browseQuery)}».</li>`;
+    if (!items.length) return `<li class="empty">${tr(`Ninguna tarjeta contiene «${esc(ui.browseQuery)}».`, `No card contains ‘${esc(ui.browseQuery)}’.`)}</li>`;
     const today = dayNum();
     const more =
       items.length > BROWSE_LIMIT
-        ? `<li class="empty">Se muestran ${BROWSE_LIMIT} de ${fmtInt(items.length)}. Escribe en el buscador para encontrar una tarjeta concreta.</li>`
+        ? `<li class="empty">${tr(`Se muestran ${BROWSE_LIMIT} de ${fmtInt(items.length)}. Escribe en el buscador para encontrar una tarjeta concreta.`, `Showing ${BROWSE_LIMIT} of ${fmtInt(items.length)}. Type in the search box to find a particular card.`)}</li>`
         : '';
     return (
       items
@@ -2977,12 +3000,12 @@ h1, h2, p { margin: 0; }
     }
     return `
     <header class="topbar">
-      <button class="icon-btn" type="button" data-act="deck" data-id="${d.id}" aria-label="Volver al mazo">${ICON.back}</button>
+      <button class="icon-btn" type="button" data-act="deck" data-id="${d.id}" aria-label="${tr('Volver al mazo', 'Back to the deck')}">${ICON.back}</button>
       <span class="topbar-title" lang="${d.lang}">${esc(d.title)}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
-      <label class="search">${ICON.search}<input id="browse-q" type="search" placeholder="Buscar en ${fmtInt(cardsIn(d, deckLevels(d)).length)} tarjetas de ${levelsLabel(deckLevels(d))}" value="${esc(ui.browseQuery)}" autocomplete="off" aria-label="Buscar tarjetas"></label>
+      <label class="search">${ICON.search}<input id="browse-q" type="search" placeholder="${tr(`Buscar en ${fmtInt(cardsIn(d, deckLevels(d)).length)} tarjetas de ${levelsLabel(deckLevels(d))}`, `Search ${fmtInt(cardsIn(d, deckLevels(d)).length)} ${levelsLabel(deckLevels(d))} cards`)}" value="${esc(ui.browseQuery)}" autocomplete="off" aria-label="${tr('Buscar tarjetas', 'Search cards')}"></label>
       <ul class="card-list" id="browse-list">${browseItems(d)}</ul>
     </main>`;
   }
@@ -2991,89 +3014,89 @@ h1, h2, p { margin: 0; }
     const st = S.settings;
     const voices = Speech.voices;
     const voiceBlock = Speech.ok
-      ? `<label class="switch-row"><span><strong>Leer la respuesta en voz alta</strong><small>Al mostrar la respuesta se lee en ${LANG().es.toLowerCase()}.</small></span><input type="checkbox" data-act="auto-speak" ${st.autoSpeak ? 'checked' : ''}></label>
-        <label class="field"><span>Velocidad <output id="rate-out">${Math.round(st.rate * 100)} %</output></span><input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="${st.rate}"></label>
-        <label class="field"><span>Voz alemana</span><select id="voice">
-          <option value="">Automática</option>
+      ? `<label class="switch-row"><span><strong>${tr('Leer la respuesta en voz alta', 'Read the answer aloud')}</strong><small>${tr(`Al mostrar la respuesta se lee en ${LANG().es.toLowerCase()}.`, `When the answer is shown, it is read out in ${LANG().enName}.`)}</small></span><input type="checkbox" data-act="auto-speak" ${st.autoSpeak ? 'checked' : ''}></label>
+        <label class="field"><span>${tr('Velocidad', 'Speed')} <output id="rate-out">${Math.round(st.rate * 100)} %</output></span><input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="${st.rate}"></label>
+        <label class="field"><span>${tr(`Voz ${LANG().adj}`, `${LANG().enName} voice`)}</span><select id="voice">
+          <option value="">${tr('Automática', 'Automatic')}</option>
           ${voices.map((v) => `<option value="${esc(v.voiceURI)}"${v.voiceURI === savedVoice() ? ' selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}
         </select></label>
-        ${voices.length ? '' : `<p class="hint">No aparece ninguna voz ${LANG().adj}. En Android: Ajustes › Sistema › Idiomas › Salida de texto a voz, y descarga los datos de voz en ${LANG().es.toLowerCase()}.</p>`}
-        <button class="btn" type="button" data-act="test-voice">Probar la voz</button>`
-      : '<p class="hint">Este navegador no puede leer texto en voz alta.</p>';
+        ${voices.length ? '' : `<p class="hint">${tr(`No aparece ninguna voz ${LANG().adj}. En Android: Ajustes › Sistema › Idiomas › Salida de texto a voz, y descarga los datos de voz en ${LANG().es.toLowerCase()}.`, `No ${LANG().enName} voice is available. On Android: Settings › System › Languages › Text-to-speech output, and download the ${LANG().enName} voice data.`)}</p>`}
+        <button class="btn" type="button" data-act="test-voice">${tr('Probar la voz', 'Test the voice')}</button>`
+      : `<p class="hint">${tr('Este navegador no puede leer texto en voz alta.', 'This browser cannot read text aloud.')}</p>`;
     return `
     <header class="topbar">
-      <button class="icon-btn" type="button" data-act="home" aria-label="Volver al inicio">${ICON.back}</button>
-      <span class="topbar-title">Ajustes</span>
+      <button class="icon-btn" type="button" data-act="home" aria-label="${tr('Volver al inicio', 'Back to home')}">${ICON.back}</button>
+      <span class="topbar-title">${tr('Ajustes', 'Settings')}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
       <section class="panel" id="sec-study" aria-labelledby="h-study">
-        <h2 class="eyebrow" id="h-study">Estudio</h2>
+        <h2 class="eyebrow" id="h-study">${tr('Estudio', 'Study')}</h2>
         <div class="set-row">
-          <span><strong>Tarjetas por tanda</strong><small>Cada vez que pulsas «Empezar»: primero las que toca repasar y después nuevas hasta completar la tanda. Si la dejas a medias, la siguiente vuelve a tener todas.</small></span>
+          <span><strong>${tr('Tarjetas por tanda', 'Cards per round')}</strong><small>${tr('Cada vez que pulsas «Empezar»: primero las que toca repasar y después nuevas hasta completar la tanda. Si la dejas a medias, la siguiente vuelve a tener todas.', 'Each time you tap ‘Start’: first the cards due for review, then new ones until the round is full. If you stop halfway, the next round is full again.')}</small></span>
           <span class="stepper">
-            <button class="icon-btn sm" type="button" data-act="npd" data-delta="-5" aria-label="Cinco menos">−</button>
+            <button class="icon-btn sm" type="button" data-act="npd" data-delta="-5" aria-label="${tr('Cinco menos', 'Five fewer')}">−</button>
             <output id="npd">${st.sessionSize}</output>
-            <button class="icon-btn sm" type="button" data-act="npd" data-delta="5" aria-label="Cinco más">+</button>
+            <button class="icon-btn sm" type="button" data-act="npd" data-delta="5" aria-label="${tr('Cinco más', 'Five more')}">+</button>
           </span>
         </div>
         <div class="set-row">
-          <span><strong>Aciertos para aprender una palabra fallada</strong><small>Una palabra nueva que aciertas a la primera ya cuenta como conocida. Si la fallas o la mandas a «Repasar», necesita este número de aciertos seguidos para contar como aprendida.</small></span>
+          <span><strong>${tr('Aciertos para aprender una palabra fallada', 'Right answers to learn a failed word')}</strong><small>${tr('Una palabra nueva que aciertas a la primera ya cuenta como conocida. Si la fallas o la mandas a «Repasar», necesita este número de aciertos seguidos para contar como aprendida.', 'A new word you get right the first time counts as known straight away. If you fail it or send it to ‘Later’, it needs this many right answers in a row to count as learned.')}</small></span>
           <span class="stepper">
-            <button class="icon-btn sm" type="button" data-act="needed" data-delta="-1" aria-label="Uno menos" ${neededRight() <= 1 ? 'disabled' : ''}>−</button>
+            <button class="icon-btn sm" type="button" data-act="needed" data-delta="-1" aria-label="${tr('Uno menos', 'One fewer')}" ${neededRight() <= 1 ? 'disabled' : ''}>−</button>
             <output id="needed">${neededRight()}</output>
-            <button class="icon-btn sm" type="button" data-act="needed" data-delta="1" aria-label="Uno más" ${neededRight() >= 10 ? 'disabled' : ''}>+</button>
+            <button class="icon-btn sm" type="button" data-act="needed" data-delta="1" aria-label="${tr('Uno más', 'One more')}" ${neededRight() >= 10 ? 'disabled' : ''}>+</button>
           </span>
         </div>
         <div class="set-group">
-          <strong>Parejas de palabras en los ejemplos</strong>
-          <small class="hint">Cada palabra o grupo del ejemplo en alemán y su traducción llevan el mismo color.</small>
+          <strong>${tr('Parejas de palabras en los ejemplos', 'Word pairs in the examples')}</strong>
+          <small class="hint">${tr('Cada palabra o grupo del ejemplo en alemán y su traducción llevan el mismo color.', 'Each word or group in the German example and its translation have the same colour.')}</small>
           ${[
-            ['bg', 'Fondo de color', 'como un rotulador'],
-            ['text', 'Letra de color', 'solo cambia el color de las letras'],
-            ['off', 'Sin colores', 'los ejemplos en texto normal'],
+            ['bg', tr('Fondo de color', 'Coloured background'), tr('como un rotulador', 'like a highlighter')],
+            ['text', tr('Letra de color', 'Coloured letters'), tr('solo cambia el color de las letras', 'only the colour of the letters changes')],
+            ['off', tr('Sin colores', 'No colours'), tr('los ejemplos en texto normal', 'the examples in plain text')],
           ]
             .map(([v, t, h]) => `<label class="check-row"><input type="radio" name="pairs" data-act="pair-style" value="${v}" ${pairStyle() === v ? 'checked' : ''}><span><b>${t}</b> · ${h}<span class="pair-demo"><span lang="de">${alignedHtml('{1|Ich wohne} {2|in} {3|Madrid}.', v)}</span> <span lang="es">${alignedHtml('{1|Vivo} {2|en} {3|Madrid}.', v)}</span></span></span></label>`)
             .join('')}
         </div>
         <div class="set-group">
-          <strong>Orden de las tarjetas nuevas</strong>
+          <strong>${tr('Orden de las tarjetas nuevas', 'Order of new cards')}</strong>
           ${[
-            ['random', 'Al azar', 'Se sortean cada vez que empiezas.'],
-            ['frequency', 'Las más útiles primero', 'De la palabra más frecuente a la menos frecuente.'],
+            ['random', tr('Al azar', 'At random'), tr('Se sortean cada vez que empiezas.', 'Shuffled every time you start.')],
+            ['frequency', tr('Las más útiles primero', 'Most useful first'), tr('De la palabra más frecuente a la menos frecuente.', 'From the most frequent word to the least frequent.')],
           ]
             .map(([v, t, h]) => `<label class="check-row"><input type="radio" name="order" data-act="order" value="${v}" ${st.order === v ? 'checked' : ''}><span><b>${t}</b> · ${h}</span></label>`)
             .join('')}
         </div>
         <div class="set-group">
-          <strong>Sentido de las tarjetas</strong>
+          <strong>${tr('Sentido de las tarjetas', 'Card direction')}</strong>
           ${dirSwitch()}
         </div>
         <div class="set-group" id="sec-decks">
-          <strong>Mazos incluidos en la práctica</strong>
+          <strong>${tr('Mazos incluidos en la práctica', 'Decks included in practice')}</strong>
           ${deckRows()}
         </div>
       </section>
       <section class="panel" aria-labelledby="h-voice">
-        <h2 class="eyebrow" id="h-voice">Voz</h2>
+        <h2 class="eyebrow" id="h-voice">${tr('Voz', 'Voice')}</h2>
         ${voiceBlock}
       </section>
       ${notesPanel()}
       <section class="panel" aria-labelledby="h-data">
-        <h2 class="eyebrow" id="h-data">Copia de seguridad</h2>
+        <h2 class="eyebrow" id="h-data">${tr('Copia de seguridad', 'Backup')}</h2>
         <p class="hint sync-label">${esc(syncLabel())}</p>
         <div class="btn-stack">
-          <button class="btn" type="button" data-act="export">Copiar una copia de seguridad</button>
-          <button class="btn" type="button" data-act="import-open" aria-expanded="${ui.importOpen}">Restaurar desde una copia</button>
+          <button class="btn" type="button" data-act="export">${tr('Copiar una copia de seguridad', 'Copy a backup')}</button>
+          <button class="btn" type="button" data-act="import-open" aria-expanded="${ui.importOpen}">${tr('Restaurar desde una copia', 'Restore from a backup')}</button>
         </div>
-        ${ui.exportText ? `<label class="field"><span>Copia de seguridad (cópiala a mano)</span><textarea id="export-text" rows="4" readonly>${esc(ui.exportText)}</textarea></label>` : ''}
-        ${ui.importOpen ? '<label class="field"><span>Pega aquí tu copia de seguridad</span><textarea id="import-text" rows="5" spellcheck="false"></textarea></label><button class="btn btn-primary" type="button" data-act="import-do">Restaurar</button>' : ''}
-        <button class="btn btn-danger" type="button" data-act="reset">${ui.confirmReset ? 'Pulsa otra vez para borrar todo el progreso' : 'Borrar el progreso'}</button>
+        ${ui.exportText ? `<label class="field"><span>${tr('Copia de seguridad (cópiala a mano)', 'Backup (copy it by hand)')}</span><textarea id="export-text" rows="4" readonly>${esc(ui.exportText)}</textarea></label>` : ''}
+        ${ui.importOpen ? `<label class="field"><span>${tr('Pega aquí tu copia de seguridad', 'Paste your backup here')}</span><textarea id="import-text" rows="5" spellcheck="false"></textarea></label><button class="btn btn-primary" type="button" data-act="import-do">${tr('Restaurar', 'Restore')}</button>` : ''}
+        <button class="btn btn-danger" type="button" data-act="reset">${ui.confirmReset ? tr('Pulsa otra vez para borrar todo el progreso', 'Tap again to reset all progress') : tr('Borrar el progreso', 'Reset progress')}</button>
       </section>
       <section class="panel about" aria-labelledby="h-about">
-        <h2 class="eyebrow" id="h-about">Sobre FlaXCards</h2>
-        <p>FlaXCards usa el repaso espaciado del método Leitner (la caja de fichas, <i lang="de">Karteikasten</i> en alemán): cada tarjeta vuelve justo antes de que la olvides. Si fallas, vuelve en minutos; si aciertas, cada vez tarda más.</p>
-        <p class="hint">Versión ${VERSION} · ${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} tarjetas en ${DECKS.length} mazos, niveles ${LEVELS.map(levelName).join(', ')}. ${curLang() === 'en' ? 'Las tarjetas de inglés (británico) se han escrito para FlaXCards; las palabras salen de las más frecuentes del inglés (wordfreq) y el nivel de cada una sigue el Marco Común Europeo.</p>' : ''}${curLang() === 'de' ? `Parte del vocabulario viene de mazos de AnkiWeb compartidos por otros estudiantes; el nivel de cada palabra sale de las listas oficiales del Goethe-Institut (A1–B1) y de las frecuencias del IDS (DeReWo).</p>` : ''}
+        <h2 class="eyebrow" id="h-about">${tr('Sobre FlaXCards', 'About FlaXCards')}</h2>
+        <p>${tr('FlaXCards usa el repaso espaciado del método Leitner (la caja de fichas, <i lang="de">Karteikasten</i> en alemán): cada tarjeta vuelve justo antes de que la olvides. Si fallas, vuelve en minutos; si aciertas, cada vez tarda más.', 'FlaXCards uses the spaced repetition of the Leitner system (the card box, <i lang="de">Karteikasten</i> in German): each card comes back just before you would forget it. If you get it wrong, it comes back within minutes; if you get it right, it takes longer each time.')}</p>
+        <p class="hint">${tr(`Versión ${VERSION} · ${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} tarjetas en ${DECKS.length} mazos, niveles ${LEVELS.map(levelName).join(', ')}.`, `Version ${VERSION} · ${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} cards in ${DECKS.length} decks, levels ${LEVELS.map(levelName).join(', ')}.`)} ${curLang() === 'en' ? `${tr('Las tarjetas de inglés (británico) se han escrito para FlaXCards; las palabras salen de las más frecuentes del inglés (wordfreq) y el nivel de cada una sigue el Marco Común Europeo.', 'The (British) English cards were written for FlaXCards; the words are taken from the most frequent in English (wordfreq) and the level of each one follows the Common European Framework.')}</p>` : ''}${curLang() === 'de' ? `${tr('Parte del vocabulario viene de mazos de AnkiWeb compartidos por otros estudiantes; el nivel de cada palabra sale de las listas oficiales del Goethe-Institut (A1–B1) y de las frecuencias del IDS (DeReWo).', 'Part of the vocabulary comes from AnkiWeb decks shared by other learners; the level of each word comes from the official Goethe-Institut lists (A1–B1) and the IDS frequency lists (DeReWo).')}</p>` : ''}
       </section>
     </main>`;
   }
@@ -3082,18 +3105,18 @@ h1, h2, p { margin: 0; }
   function deckRows() {
     const row = (d) => `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${d.id}" ${isActive(d) ? 'checked' : ''}><span lang="${d.lang}">${esc(d.title)}</span><span class="check-levels">${levelRange(d)}</span></label>`;
     const n = new Set(failedKeys().map(wordOf)).size;
-    const check = `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${FEHLER}" ${fehlerOn() ? 'checked' : ''}><span lang="${curLang()}">${LANG().review}</span><span class="check-levels">${n ? `${fmtInt(n)} por repasar` : 'vacío'}</span></label>`;
+    const check = `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${FEHLER}" ${fehlerOn() ? 'checked' : ''}><span lang="${curLang()}">${LANG().review}</span><span class="check-levels">${n ? tr(`${fmtInt(n)} por repasar`, `${fmtInt(n)} to review`) : tr('vacío', 'empty')}</span></label>`;
     const nh = new Set(hardKeys().map(wordOf)).size;
-    const hard = `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${HARD}" ${hardOn() ? 'checked' : ''}><span lang="${curLang()}">${LANG().hard}</span><span class="check-levels">${nh ? `${fmtInt(nh)} palabras` : 'vacío'}</span></label>`;
+    const hard = `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${HARD}" ${hardOn() ? 'checked' : ''}><span lang="${curLang()}">${LANG().hard}</span><span class="check-levels">${nh ? tr(`${fmtInt(nh)} palabras`, `${fmtInt(nh)} ${nh === 1 ? 'word' : 'words'}`) : tr('vacío', 'empty')}</span></label>`;
     const first = DECKS.filter((d) => d.id === LANG().main);
-    const help = `<p class="hint"><b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. Si lo marcas solo, toda la tanda sale de ahí; con otros mazos, la mitad. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en Estudio) para que vuelva a contar como aprendida.</p>`;
+    const help = `<p class="hint">${tr(`<b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. Si lo marcas solo, toda la tanda sale de ahí; con otros mazos, la mitad. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en Estudio) para que vuelva a contar como aprendida.`, `<b>${LANG().review}</b>: the failed words you have not learned yet. <b>${LANG().hard}</b>: every word you did not learn the first time (even if you know it now); the ones you failed this week or last week come first, and older ones less and less often. Ticked on its own, the whole round comes from it; with other decks, half of it. If you fail a word you already knew, you will need to get it right ${neededRight()} ${neededRight() === 1 ? 'time' : 'times in a row'} (the number set under Study) for it to count as learned again.`)}</p>`;
     return first.map(row).join('') + check + hard + DECKS.filter((d) => d.id !== LANG().main).map(row).join('') + help;
   }
   function viewProgressScreen() {
     return `
     <header class="topbar">
-      <button class="icon-btn" type="button" data-act="home" aria-label="Volver al inicio">${ICON.back}</button>
-      <span class="topbar-title">Progreso</span>
+      <button class="icon-btn" type="button" data-act="home" aria-label="${tr('Volver al inicio', 'Back to home')}">${ICON.back}</button>
+      <span class="topbar-title">${tr('Progreso', 'Progress')}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">${viewProgress(dayNum())}</main>`;
@@ -3137,33 +3160,34 @@ h1, h2, p { margin: 0; }
     tick: 0,
   };
 
+  // [Spanish, English] texts, chosen with tr(...pair) when the message is shown
   const COMP_ERRORS = {
-    daily_limit: 'Ya has jugado tus partidas puntuables de hoy. Puedes seguir en modo práctica: no suma puntos.',
-    active_session: 'Tienes una partida puntuable abierta. Continúala o abandónala.',
-    session_expired: 'Se acabaron los 10 minutos: esta partida no suma puntos.',
-    session_closed: 'Esa partida ya está cerrada.',
-    session_not_found: 'No se encuentra esa partida.',
-    rate_limited: 'Demasiadas partidas seguidas. Espera un rato.',
-    not_authenticated: 'Inicia sesión para jugar.',
-    not_enough_questions: 'El servidor todavía no tiene preguntas suficientes.',
-    invalid_answers: 'Las respuestas no son válidas.',
-    username_taken: 'Ese nombre ya lo usa otra persona.',
-    invalid_username: 'El nombre debe tener de 3 a 24 letras, números o «_ . -».',
-    profile_missing: 'Tu cuenta no tiene perfil todavía. Vuelve a entrar.',
-    load_failed: 'No se pudo cargar la conexión con el servidor de la competición.',
-    'Invalid login credentials': 'Correo o contraseña incorrectos.',
-    'Email not confirmed': 'Confirma primero tu correo (te hemos enviado un enlace).',
-    'User already registered': 'Ya hay una cuenta con ese correo.',
-    'Failed to fetch': 'Sin conexión con el servidor de la competición.',
-    link_expired: 'El enlace ha caducado o ya se había usado. Entra con tu correo y contraseña; si aún no confirmaste la cuenta, pide otro correo.',
-    'Email rate limit exceeded': 'Se han enviado demasiados correos. Espera un rato y vuelve a intentarlo.',
-    'Error sending confirmation email': 'No se pudo enviar el correo de confirmación. Inténtalo más tarde.',
+    daily_limit: ['Ya has jugado tus partidas puntuables de hoy. Puedes seguir en modo práctica: no suma puntos.', 'You have already played today’s ranked games. You can carry on in practice mode: it does not add points.'],
+    active_session: ['Tienes una partida puntuable abierta. Continúala o abandónala.', 'You have a ranked game open. Continue it or abandon it.'],
+    session_expired: ['Se acabaron los 10 minutos: esta partida no suma puntos.', 'The 10 minutes are up: this game does not add points.'],
+    session_closed: ['Esa partida ya está cerrada.', 'That game is already closed.'],
+    session_not_found: ['No se encuentra esa partida.', 'That game cannot be found.'],
+    rate_limited: ['Demasiadas partidas seguidas. Espera un rato.', 'Too many games in a row. Wait a while.'],
+    not_authenticated: ['Inicia sesión para jugar.', 'Sign in to play.'],
+    not_enough_questions: ['El servidor todavía no tiene preguntas suficientes.', 'The server does not have enough questions yet.'],
+    invalid_answers: ['Las respuestas no son válidas.', 'The answers are not valid.'],
+    username_taken: ['Ese nombre ya lo usa otra persona.', 'Someone else is already using that name.'],
+    invalid_username: ['El nombre debe tener de 3 a 24 letras, números o «_ . -».', 'The name must have 3 to 24 letters, numbers or ‘_ . -’.'],
+    profile_missing: ['Tu cuenta no tiene perfil todavía. Vuelve a entrar.', 'Your account has no profile yet. Sign in again.'],
+    load_failed: ['No se pudo cargar la conexión con el servidor de la competición.', 'Could not load the connection to the competition server.'],
+    'Invalid login credentials': ['Correo o contraseña incorrectos.', 'Wrong email or password.'],
+    'Email not confirmed': ['Confirma primero tu correo (te hemos enviado un enlace).', 'Confirm your email first (we have sent you a link).'],
+    'User already registered': ['Ya hay una cuenta con ese correo.', 'There is already an account with that email.'],
+    'Failed to fetch': ['Sin conexión con el servidor de la competición.', 'No connection to the competition server.'],
+    link_expired: ['El enlace ha caducado o ya se había usado. Entra con tu correo y contraseña; si aún no confirmaste la cuenta, pide otro correo.', 'The link has expired or has already been used. Sign in with your email and password; if you have not confirmed your account yet, ask for another email.'],
+    'Email rate limit exceeded': ['Se han enviado demasiados correos. Espera un rato y vuelve a intentarlo.', 'Too many emails have been sent. Wait a while and try again.'],
+    'Error sending confirmation email': ['No se pudo enviar el correo de confirmación. Inténtalo más tarde.', 'Could not send the confirmation email. Try again later.'],
   };
   const compMsg = (e) => {
     const m = (e && e.message) || '';
-    if (COMP_ERRORS[m]) return COMP_ERRORS[m];
-    if (/only request this after/i.test(m)) return 'Espera un minuto antes de pedir otro correo.';
-    return m || 'Algo ha fallado.';
+    if (COMP_ERRORS[m]) return tr(...COMP_ERRORS[m]);
+    if (/only request this after/i.test(m)) return tr('Espera un minuto antes de pedir otro correo.', 'Wait a minute before asking for another email.');
+    return m || tr('Algo ha fallado.', 'Something went wrong.');
   };
   // where the link of the confirmation email brings the player back: this same page
   const compHere = () => location.href.split('#')[0].split('?')[0];
@@ -3253,7 +3277,7 @@ h1, h2, p { margin: 0; }
       if (error) throw new Error(error.message);
       if (!data.session) {
         // the account waits for the email: its link brings the player back here, already signed in
-        comp.notice = `Te hemos enviado un correo a ${email}. Pulsa el enlace que contiene y volverás aquí con la sesión iniciada. Si no lo ves, mira en spam.`;
+        comp.notice = tr(`Te hemos enviado un correo a ${email}. Pulsa el enlace que contiene y volverás aquí con la sesión iniciada. Si no lo ves, mira en spam.`, `We have sent an email to ${email}. Tap the link in it and you will come back here signed in. If you cannot see it, check your spam folder.`);
         comp.authMode = 'login';
         return;
       }
@@ -3273,7 +3297,7 @@ h1, h2, p { margin: 0; }
     const c = await compClient();
     const { error } = await c.auth.resend({ type: 'signup', email: comp.unconfirmed, options: { emailRedirectTo: compHere() } });
     if (error) throw new Error(error.message);
-    comp.notice = `Te hemos enviado otro correo a ${comp.unconfirmed}. Pulsa su enlace para confirmar la cuenta.`;
+    comp.notice = tr(`Te hemos enviado otro correo a ${comp.unconfirmed}. Pulsa su enlace para confirmar la cuenta.`, `We have sent another email to ${comp.unconfirmed}. Tap its link to confirm your account.`);
     comp.unconfirmed = '';
   }
   // back from the confirmation email: supabase-js reads the session from the address; then the address is cleaned
@@ -3288,7 +3312,7 @@ h1, h2, p { margin: 0; }
         comp.user = data && data.session ? data.session.user : null;
         comp.ready = true;
         if (!comp.user) throw new Error('link_expired');
-        toast('Correo confirmado: ya has entrado con tu cuenta.');
+        toast(tr('Correo confirmado: ya has entrado con tu cuenta.', 'Email confirmed: you are now signed in.'));
       } finally {
         history.replaceState(history.state, '', compHere());
       }
@@ -3413,7 +3437,7 @@ h1, h2, p { margin: 0; }
   function fmtWeek(monday) {
     const a = new Date(`${monday}T12:00:00`);
     const b = new Date(a.getTime() + 6 * DAY);
-    const f = (x) => x.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    const f = (x) => x.toLocaleDateString(LOCALE(), { day: 'numeric', month: 'short' });
     return `${f(a)} – ${f(b)}`;
   }
 
@@ -3421,7 +3445,7 @@ h1, h2, p { margin: 0; }
   function compTop(title, back = 'home') {
     // on its own page there is no home to go back to
     return `<header class="topbar">
-      ${COMP_ALONE && back === 'home' ? '<span class="icon-spacer"></span>' : `<button class="icon-btn" type="button" data-act="${back}" aria-label="Volver">${ICON.back}</button>`}
+      ${COMP_ALONE && back === 'home' ? '<span class="icon-spacer"></span>' : `<button class="icon-btn" type="button" data-act="${back}" aria-label="${tr('Volver', 'Back')}">${ICON.back}</button>`}
       <span class="topbar-title">${title}</span>
       <span class="icon-spacer"></span>
     </header>`;
@@ -3430,15 +3454,15 @@ h1, h2, p { margin: 0; }
 
   function viewCompete() {
     if (!COMP_ON) {
-      return `${compTop('Competición semanal')}
+      return `${compTop(tr('Competición semanal', 'Weekly competition'))}
       <main class="screen"><section class="panel">
-        <h2 class="eyebrow">Aún no está conectada</h2>
-        <p>La competición necesita un servidor propio (un proyecto gratuito de Supabase) que todavía no se ha configurado en esta copia de FlaXCards.</p>
-        <p class="hint">Quien mantiene la app debe crear el proyecto, aplicar <code>competition/supabase/migrations</code>, cargar las preguntas y poner la dirección y la clave pública en <code>competition/config.json</code> antes de generar la app. Todo está explicado en <code>competition/README.md</code>.</p>
+        <h2 class="eyebrow">${tr('Aún no está conectada', 'Not connected yet')}</h2>
+        <p>${tr('La competición necesita un servidor propio (un proyecto gratuito de Supabase) que todavía no se ha configurado en esta copia de FlaXCards.', 'The competition needs its own server (a free Supabase project), which has not been set up yet in this copy of FlaXCards.')}</p>
+        <p class="hint">${tr('Quien mantiene la app debe crear el proyecto, aplicar <code>competition/supabase/migrations</code>, cargar las preguntas y poner la dirección y la clave pública en <code>competition/config.json</code> antes de generar la app. Todo está explicado en <code>competition/README.md</code>.', 'Whoever maintains the app must create the project, apply <code>competition/supabase/migrations</code>, load the questions and put the address and the public key in <code>competition/config.json</code> before building the app. It is all explained in <code>competition/README.md</code>.')}</p>
       </section></main>`;
     }
-    if (!comp.ready) return `${compTop('Competición semanal')}<main class="screen"><p class="comp-wait">Conectando…</p>${compError()}</main>`;
-    if (!comp.user) return `${compTop('Competición semanal')}<main class="screen">${compAuthForm()}</main>`;
+    if (!comp.ready) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen"><p class="comp-wait">${tr('Conectando…', 'Connecting…')}</p>${compError()}</main>`;
+    if (!comp.user) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compAuthForm()}</main>`;
     const st = comp.status || {};
     const current = !comp.week;
     const left = st.competitive_left_today ?? 0;
@@ -3449,42 +3473,42 @@ h1, h2, p { margin: 0; }
       .join('');
     const playBlock = current
       ? `<div class="btn-stack">
-          ${active ? `<button class="btn btn-primary" type="button" data-act="comp-resume" data-id="${esc(active.session_id)}">Continuar la partida puntuable</button><button class="btn" type="button" data-act="comp-abandon-open" data-id="${esc(active.session_id)}">Abandonarla (no suma puntos)</button>` : ''}
-          ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 5} hoy)</small></button>` : ''}
-          <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>Jugar en práctica <small>(no suma puntos)</small></button>
+          ${active ? `<button class="btn btn-primary" type="button" data-act="comp-resume" data-id="${esc(active.session_id)}">${tr('Continuar la partida puntuable', 'Continue the ranked game')}</button><button class="btn" type="button" data-act="comp-abandon-open" data-id="${esc(active.session_id)}">${tr('Abandonarla (no suma puntos)', 'Abandon it (no points)')}</button>` : ''}
+          ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr(`Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 5} hoy)</small>`, `Play a ranked game <small>(${left} of ${st.rules ? st.rules.daily_limit : 5} today)</small>`)}</button>` : ''}
+          <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${left > 0 ? `Cada partida: 10 preguntas y 10 minutos. Acierto +10, fallo o sin responder −5 (de 0 a 100 puntos). Puedes jugar ${st.rules ? st.rules.daily_limit : 5} partidas puntuables al día; empezar una ya la gasta.` : 'Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.'}</p>`
+        <p class="hint">${left > 0 ? tr(`Cada partida: 10 preguntas y 10 minutos. Acierto +10, fallo o sin responder −5 (de 0 a 100 puntos). Puedes jugar ${st.rules ? st.rules.daily_limit : 5} partidas puntuables al día; empezar una ya la gasta.`, `Each game: 10 questions in 10 minutes. Right +10, wrong or unanswered −5 (0 to 100 points). You can play ${st.rules ? st.rules.daily_limit : 5} ranked games a day; starting one uses it up.`) : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
       : '';
-    return `${compTop('Competición semanal')}
+    return `${compTop(tr('Competición semanal', 'Weekly competition'))}
     <main class="screen">
       ${compError()}
       <section class="panel comp-week" aria-labelledby="h-week">
-        <h2 class="eyebrow" id="h-week">${current ? 'Esta semana' : 'Semana'} · ${st.week_start ? fmtWeek(st.week_start) : ''}</h2>
+        <h2 class="eyebrow" id="h-week">${current ? tr('Esta semana', 'This week') : tr('Semana', 'Week')} · ${st.week_start ? fmtWeek(st.week_start) : ''}</h2>
         <div class="stats">
-          ${stat('Tus puntos', fmtInt(st.total_points || 0))}
-          ${stat('Posición', st.rank ? `${fmtInt(st.rank)}<small> de ${fmtInt(st.players || 0)}</small>` : '—')}
-          ${current ? stat('Hoy quedan', `${left}<small> partidas</small>`) : stat('Partidas', fmtInt(st.games_played || 0))}
+          ${stat(tr('Tus puntos', 'Your points'), fmtInt(st.total_points || 0))}
+          ${stat(tr('Posición', 'Rank'), st.rank ? `${fmtInt(st.rank)}<small> ${tr('de', 'of')} ${fmtInt(st.players || 0)}</small>` : '—')}
+          ${current ? stat(tr('Hoy quedan', 'Left today'), `${left}<small> ${tr('partidas', 'games')}</small>`) : stat(tr('Partidas', 'Games'), fmtInt(st.games_played || 0))}
         </div>
-        ${current ? `<p class="hint">Cierra en ${fmtLeft(st.seconds_left)} (lunes a las 00:00, hora de España). Como mucho puedes sumar ${fmtInt(st.max_points_left || 0)} puntos más esta semana.</p>` : ''}
+        ${current ? `<p class="hint">${tr(`Cierra en ${fmtLeft(st.seconds_left)} (lunes a las 00:00, hora de España). Como mucho puedes sumar ${fmtInt(st.max_points_left || 0)} puntos más esta semana.`, `Closes in ${fmtLeft(st.seconds_left)} (Monday at 00:00, Spanish time). You can add at most ${fmtInt(st.max_points_left || 0)} more points this week.`)}</p>` : ''}
         ${playBlock}
       </section>
       <section class="panel" aria-labelledby="h-board">
-        <div class="board-head"><h2 class="eyebrow" id="h-board">Clasificación${current ? '' : ` · ${fmtWeek(comp.week)}`}</h2><button class="link-btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>Actualizar</button></div>
-        ${rows ? `<ol class="board">${rows}</ol>` : '<p class="hint">Nadie ha jugado todavía esta semana. ¡Sé el primero!</p>'}
-        ${st.rank && !me ? `<p class="board-me">Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos</p>` : ''}
+        <div class="board-head"><h2 class="eyebrow" id="h-board">${tr('Clasificación', 'Leaderboard')}${current ? '' : ` · ${fmtWeek(comp.week)}`}</h2><button class="link-btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>${tr('Actualizar', 'Refresh')}</button></div>
+        ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
+        ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
         <div class="btn-row">
-          ${current ? '<button class="btn" type="button" data-act="comp-weeks">Semanas anteriores</button>' : '<button class="btn" type="button" data-act="comp-week" data-week="">Volver a esta semana</button>'}
+          ${current ? `<button class="btn" type="button" data-act="comp-weeks">${tr('Semanas anteriores', 'Previous weeks')}</button>` : `<button class="btn" type="button" data-act="comp-week" data-week="">${tr('Volver a esta semana', 'Back to this week')}</button>`}
         </div>
-        ${comp.weeks ? `<ul class="weeks">${comp.weeks.map((w) => `<li><button class="link-btn" type="button" data-act="comp-week" data-week="${w.week_start}">${fmtWeek(w.week_start)}</button> · ${fmtInt(w.players)} jugadores${w.my_points != null ? ` · tú: ${fmtInt(w.my_points)} puntos, puesto ${w.my_rank}` : ''}</li>`).join('') || '<li>Todavía no hay semanas anteriores.</li>'}</ul>` : ''}
+        ${comp.weeks ? `<ul class="weeks">${comp.weeks.map((w) => `<li><button class="link-btn" type="button" data-act="comp-week" data-week="${w.week_start}">${fmtWeek(w.week_start)}</button> · ${tr(`${fmtInt(w.players)} jugadores${w.my_points != null ? ` · tú: ${fmtInt(w.my_points)} puntos, puesto ${w.my_rank}` : ''}`, `${fmtInt(w.players)} players${w.my_points != null ? ` · you: ${fmtInt(w.my_points)} points, rank ${w.my_rank}` : ''}`)}</li>`).join('') || `<li>${tr('Todavía no hay semanas anteriores.', 'No previous weeks yet.')}</li>`}</ul>` : ''}
       </section>
       <section class="panel" aria-labelledby="h-profile">
-        <h2 class="eyebrow" id="h-profile">Tu perfil</h2>
+        <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
         <form class="comp-form" data-form="comp-username">
-          <label class="field"><span>Nombre en la clasificación</span><input name="username" value="${esc(st.username || '')}" minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" required></label>
-          <button class="btn" type="submit" ${comp.busy ? 'disabled' : ''}>Guardar nombre</button>
+          <label class="field"><span>${tr('Nombre en la clasificación', 'Name on the leaderboard')}</span><input name="username" value="${esc(st.username || '')}" minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" required></label>
+          <button class="btn" type="submit" ${comp.busy ? 'disabled' : ''}>${tr('Guardar nombre', 'Save name')}</button>
         </form>
         <p class="hint">${esc(comp.user.email || '')}</p>
-        <button class="btn" type="button" data-act="comp-signout">Cerrar sesión</button>
+        <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
       </section>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
     </main>`;
@@ -3493,18 +3517,18 @@ h1, h2, p { margin: 0; }
   function compAuthForm() {
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
-      <h2 class="eyebrow">${signup ? 'Crear una cuenta' : 'Entrar'}</h2>
-      <p class="hint">Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).${COMP_ALONE ? ' Son 10 preguntas de vocabulario alemán por partida.' : ' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.'}</p>
+      <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
+      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).', 'The weekly leaderboard needs an account (just an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario alemán por partida.', ' Each game has 10 German vocabulary questions.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
-        ${signup ? '<label class="field"><span>Nombre en la clasificación</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="nickname"></label>' : ''}
-        <label class="field"><span>Correo</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>
-        <label class="field"><span>Contraseña</span><input name="password" type="password" required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
-        <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${signup ? 'Crear cuenta' : 'Entrar'}</button>
+        ${signup ? `<label class="field"><span>${tr('Nombre en la clasificación', 'Name on the leaderboard')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="nickname"></label>` : ''}
+        <label class="field"><span>${tr('Correo', 'Email')}</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>
+        <label class="field"><span>${tr('Contraseña', 'Password')}</span><input name="password" type="password" required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
+        <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${signup ? tr('Crear cuenta', 'Create account') : tr('Entrar', 'Sign in')}</button>
       </form>
-      ${comp.unconfirmed ? `<button class="link-btn" type="button" data-act="comp-resend" ${comp.busy ? 'disabled' : ''}>Reenviar el correo de confirmación</button>` : ''}
-      <button class="link-btn" type="button" data-act="comp-auth-mode">${signup ? 'Ya tengo cuenta: entrar' : 'No tengo cuenta: crear una'}</button>
+      ${comp.unconfirmed ? `<button class="link-btn" type="button" data-act="comp-resend" ${comp.busy ? 'disabled' : ''}>${tr('Reenviar el correo de confirmación', 'Resend the confirmation email')}</button>` : ''}
+      <button class="link-btn" type="button" data-act="comp-auth-mode">${signup ? tr('Ya tengo cuenta: entrar', 'I have an account: sign in') : tr('No tengo cuenta: crear una', 'I don’t have an account: create one')}</button>
     </section>`;
   }
 
@@ -3516,20 +3540,20 @@ h1, h2, p { margin: 0; }
     const counted = g.counted;
     return `<div class="quiz">
       <header class="study-bar">
-        <button class="icon-btn" type="button" data-act="comp-abandon-open" data-id="${esc(g.session_id)}" aria-label="Abandonar la partida">${ICON.close}</button>
-        <span class="comp-badge ${counted ? 'is-counted' : 'is-practice'}">${counted ? 'Puntuable' : 'Práctica · no suma'}</span>
+        <button class="icon-btn" type="button" data-act="comp-abandon-open" data-id="${esc(g.session_id)}" aria-label="${tr('Abandonar la partida', 'Abandon the game')}">${ICON.close}</button>
+        <span class="comp-badge ${counted ? 'is-counted' : 'is-practice'}">${counted ? tr('Puntuable', 'Ranked') : tr('Práctica · no suma', 'Practice · no points')}</span>
         <span class="quiz-meta"><span>${comp.index + 1} / ${g.questions.length}</span><span id="quiz-timer" class="quiz-timer">${fmtClock(quizSecondsLeft())}</span></span>
       </header>
       ${compError()}
       <main class="quiz-body">
-        <p class="eyebrow">¿Cómo se dice en alemán?</p>
+        <p class="eyebrow">${tr('¿Cómo se dice en alemán?', 'How do you say it in German?')}</p>
         <h2 class="quiz-q" lang="es">${esc(q.statement)}</h2>
         <div class="quiz-options">
           ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="de" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
         </div>
         <div class="quiz-nav">
-          <button class="link-btn" type="button" data-act="comp-prev" ${comp.index === 0 ? 'disabled' : ''}>‹ Anterior</button>
-          <button class="link-btn" type="button" data-act="comp-skip">${comp.index < g.questions.length - 1 ? 'Saltar ›' : 'Terminar'}</button>
+          <button class="link-btn" type="button" data-act="comp-prev" ${comp.index === 0 ? 'disabled' : ''}>‹ ${tr('Anterior', 'Previous')}</button>
+          <button class="link-btn" type="button" data-act="comp-skip">${comp.index < g.questions.length - 1 ? tr('Saltar ›', 'Skip ›') : tr('Terminar', 'Finish')}</button>
         </div>
       </main>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
@@ -3542,28 +3566,28 @@ h1, h2, p { margin: 0; }
     const items = (r.review || [])
       .map((x) => `<li class="${x.is_correct ? 'is-ok' : 'is-bad'}"><span class="rv-q" lang="es">${esc(x.statement)}</span><span class="rv-a" lang="de">${esc(x.correct_text)}</span><span class="rv-mark">${x.is_correct ? '✓' : x.selected_option_id ? '✗' : '—'}</span></li>`)
       .join('');
-    return `${compTop('Resultado', 'compete')}
+    return `${compTop(tr('Resultado', 'Result'), 'compete')}
     <main class="screen">
       <section class="panel">
-        <p class="eyebrow">${r.counted ? 'Partida puntuable' : 'Partida de práctica · no suma puntos'}</p>
-        <div class="stats">${stat('Aciertos', r.correct)}${stat('Fallos', r.incorrect)}${stat('Puntos', r.score)}</div>
-        ${r.counted ? `<p class="hint">Llevas ${fmtInt(r.week_points || 0)} puntos esta semana${r.rank ? ` y vas en el puesto ${fmtInt(r.rank)}` : ''}.</p>` : '<p class="hint">Las partidas de práctica no cuentan para la clasificación.</p>'}
+        <p class="eyebrow">${r.counted ? tr('Partida puntuable', 'Ranked game') : tr('Partida de práctica · no suma puntos', 'Practice game · no points')}</p>
+        <div class="stats">${stat(tr('Aciertos', 'Right'), r.correct)}${stat(tr('Fallos', 'Wrong'), r.incorrect)}${stat(tr('Puntos', 'Points'), r.score)}</div>
+        ${r.counted ? `<p class="hint">${tr(`Llevas ${fmtInt(r.week_points || 0)} puntos esta semana${r.rank ? ` y vas en el puesto ${fmtInt(r.rank)}` : ''}.`, `You have ${fmtInt(r.week_points || 0)} points this week${r.rank ? ` and your rank is ${fmtInt(r.rank)}` : ''}.`)}</p>` : `<p class="hint">${tr('Las partidas de práctica no cuentan para la clasificación.', 'Practice games do not count towards the leaderboard.')}</p>`}
         <div class="btn-stack">
-          <button class="btn btn-primary" type="button" data-act="compete">Ver la clasificación</button>
+          <button class="btn btn-primary" type="button" data-act="compete">${tr('Ver la clasificación', 'See the leaderboard')}</button>
         </div>
       </section>
-      <section class="panel"><h2 class="eyebrow">Respuestas</h2><ol class="review">${items}</ol></section>
+      <section class="panel"><h2 class="eyebrow">${tr('Respuestas', 'Answers')}</h2><ol class="review">${items}</ol></section>
     </main>`;
   }
 
   function compAbandonSheet() {
     return `<div class="sheet-backdrop" data-act="comp-abandon-close"></div>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ab-title">
-        <h2 class="sheet-title" id="ab-title">¿Abandonar la partida?</h2>
-        <p>No sumará puntos${comp.game && !comp.game.counted ? '' : ' y la partida de hoy queda gastada'}.</p>
+        <h2 class="sheet-title" id="ab-title">${tr('¿Abandonar la partida?', 'Abandon the game?')}</h2>
+        <p>${tr(`No sumará puntos${comp.game && !comp.game.counted ? '' : ' y la partida de hoy queda gastada'}.`, `It will not add points${comp.game && !comp.game.counted ? '' : ' and today’s game is used up'}.`)}</p>
         <div class="btn-row">
-          <button class="btn" type="button" data-act="comp-abandon-close">Seguir jugando</button>
-          <button class="btn btn-danger" type="button" data-act="comp-abandon">Abandonar</button>
+          <button class="btn" type="button" data-act="comp-abandon-close">${tr('Seguir jugando', 'Keep playing')}</button>
+          <button class="btn btn-danger" type="button" data-act="comp-abandon">${tr('Abandonar', 'Abandon')}</button>
         </div>
       </div>`;
   }
@@ -3652,7 +3676,7 @@ h1, h2, p { margin: 0; }
       compStep(async () => {
         await rpc('quiz_set_username', { p_username: form.username.value.trim() });
         await compLoad();
-        toast('Nombre guardado.');
+        toast(tr('Nombre guardado.', 'Name saved.'));
       });
     }
   });
@@ -3687,20 +3711,21 @@ h1, h2, p { margin: 0; }
     const s = savedSession();
     const account = s
       ? `<section class="panel">
-        <h2 class="eyebrow">Tu cuenta</h2>
-        <p>Has entrado como <strong>${esc((s.user && s.user.email) || 'tu cuenta')}</strong>.</p>
+        <h2 class="eyebrow">${tr('Tu cuenta', 'Your account')}</h2>
+        <p>${tr('Has entrado como', 'You are signed in as')} <strong>${esc((s.user && s.user.email) || tr('tu cuenta', 'your account'))}</strong>.</p>
         ${compError()}
-        <button class="btn btn-primary" type="button" data-act="langs">Continuar</button>
-        <button class="link-btn" type="button" data-act="welcome-signout" ${comp.busy ? 'disabled' : ''}>Cerrar sesión o usar otra cuenta</button>
+        <button class="btn btn-primary" type="button" data-act="langs">${tr('Continuar', 'Continue')}</button>
+        <button class="link-btn" type="button" data-act="welcome-signout" ${comp.busy ? 'disabled' : ''}>${tr('Cerrar sesión o usar otra cuenta', 'Sign out or use another account')}</button>
       </section>`
       : `${compAuthForm()}
       <section class="panel">
-        <button class="btn" type="button" data-act="guest">Seguir como invitado</button>
-        <p class="hint">Como invitado estudias igual, pero no puedes jugar la competición semanal. Podrás crear la cuenta más adelante.</p>
+        <button class="btn" type="button" data-act="guest">${tr('Seguir como invitado', 'Continue as a guest')}</button>
+        <p class="hint">${tr('Como invitado estudias igual, pero no puedes jugar la competición semanal. Podrás crear la cuenta más adelante.', 'As a guest you study just the same, but you cannot play the weekly competition. You can create an account later.')}</p>
       </section>`;
     return `
     <main class="screen langs welcome">
-      <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">Tarjetas para aprender idiomas</p></div>
+      <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
+      ${uiChoice()}
       ${account}
     </main>`;
   }
@@ -3708,12 +3733,12 @@ h1, h2, p { margin: 0; }
     const site = String(COMP_CFG.site || '');
     return `<div class="sheet-backdrop" data-act="comp-link-close"></div>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cl-title">
-        <h2 class="sheet-title" id="cl-title">Competición semanal</h2>
-        <p>Dentro de claude.ai la competición no puede conectarse. Ábrela en tu página de FlaXCards, en otra pestaña o en el móvil:</p>
+        <h2 class="sheet-title" id="cl-title">${tr('Competición semanal', 'Weekly competition')}</h2>
+        <p>${tr('Dentro de claude.ai la competición no puede conectarse. Ábrela en tu página de FlaXCards, en otra pestaña o en el móvil:', 'The competition cannot connect from inside claude.ai. Open it on your FlaXCards page, in another tab or on your phone:')}</p>
         <p class="comp-link"><a href="${esc(site)}" target="_blank" rel="noopener">${esc(site.replace(/^https?:\/\//, ''))}</a></p>
         <div class="btn-row">
-          <button class="btn" type="button" data-act="comp-link-close">Cerrar</button>
-          <button class="btn btn-primary" type="button" data-act="comp-link-copy">Copiar el enlace</button>
+          <button class="btn" type="button" data-act="comp-link-close">${tr('Cerrar', 'Close')}</button>
+          <button class="btn btn-primary" type="button" data-act="comp-link-copy">${tr('Copiar el enlace', 'Copy the link')}</button>
         </div>
       </div>`;
   }
@@ -3730,9 +3755,10 @@ h1, h2, p { margin: 0; }
       m.content = t ? (t === 'dark' ? '#0f141a' : '#edf0f4') : m.dataset.orig;
     });
   }
-  const themeBtn = () => `<button class="icon-btn theme-btn" type="button" data-act="theme" aria-label="${isDark() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}">${ICON.theme}</button>`;
+  const themeBtn = () => `<button class="icon-btn theme-btn" type="button" data-act="theme" aria-label="${isDark() ? tr('Cambiar a modo claro', 'Switch to light mode') : tr('Cambiar a modo oscuro', 'Switch to dark mode')}">${ICON.theme}</button>`;
   function render() {
     applyTheme();
+    document.documentElement.lang = uiLang();
     useLang(S.settings.lang);
     const view = VIEWS[ui.screen] || viewHome;
     const html = view();
@@ -3955,7 +3981,7 @@ h1, h2, p { margin: 0; }
         const on = new Set(curLevels());
         const lv = el.dataset.level;
         if (on.has(lv) && on.size === 1) {
-          toast('Deja al menos un nivel marcado.');
+          toast(tr('Deja al menos un nivel marcado.', 'Keep at least one level ticked.'));
           break;
         }
         if (on.has(lv)) on.delete(lv);
@@ -3989,6 +4015,11 @@ h1, h2, p { margin: 0; }
       case 'guest':
         go('langs');
         break;
+      case 'ui-lang':
+        S.settings.uiLang = el.dataset.ui === 'en' ? 'en' : 'es';
+        saveSettings();
+        render();
+        break;
       case 'theme':
         S.settings.theme = isDark() ? 'light' : 'dark';
         saveSettings();
@@ -4015,11 +4046,11 @@ h1, h2, p { margin: 0; }
         const site = String(COMP_CFG.site || '');
         const copied = navigator.clipboard ? navigator.clipboard.writeText(site) : Promise.reject(new Error('no clipboard'));
         copied.then(
-          () => toast('Enlace copiado.'),
+          () => toast(tr('Enlace copiado.', 'Link copied.')),
           () => {
             const a = app.querySelector('.comp-link a');
             if (a) window.getSelection().selectAllChildren(a);
-            toast('No se pudo copiar: mantén pulsado el enlace para copiarlo.');
+            toast(tr('No se pudo copiar: mantén pulsado el enlace para copiarlo.', 'Could not copy: press and hold the link to copy it.'));
           }
         );
         break;
@@ -4053,7 +4084,7 @@ h1, h2, p { margin: 0; }
         saveNote(sess.current, box ? box.value.trim() : '');
         ui.flagOpen = false;
         render();
-        toast('Tarjeta marcada. La verás en Ajustes › Tarjetas marcadas.');
+        toast(tr('Tarjeta marcada. La verás en Ajustes › Tarjetas marcadas.', 'Card flagged. You will find it in Settings › Flagged cards.'));
         break;
       }
       case 'flag-delete':
