@@ -1,7 +1,7 @@
 {
   "name": "FlaXCards · Competición semanal",
   "short_name": "Competición",
-  "description": "Competición semanal de vocabulario alemán",
+  "description": "Competiciones semanales de vocabulario alemán, inglés e italiano",
   "lang": "es",
   "start_url": "./",
   "scope": "./",

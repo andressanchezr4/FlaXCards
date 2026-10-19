@@ -1045,6 +1045,10 @@ h1, h2, p { margin: 0; }
 .comp-entry svg { width: 28px; height: 28px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .comp-entry span { display: grid; }
 .comp-entry small { font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
+.comp-languages { display: flex; flex-wrap: wrap; gap: 8px; }
+.comp-language { flex: 1; min-width: 84px; min-height: 44px; }
+.comp-language[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.comp-language-picker .hint { margin-bottom: 0; }
 .comp-error { padding: 10px 12px; border-radius: 10px; background: var(--again-bg); color: var(--again-ink); font-weight: 700; }
 .comp-notice { padding: 10px 12px; border-radius: 10px; background: var(--miss-bg); color: var(--miss-ink); }
 .comp-wait { text-align: center; color: var(--muted); padding: 24px 0; }
@@ -1146,7 +1150,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.5';
+  const VERSION = '5.6';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -2993,7 +2997,7 @@ h1, h2, p { margin: 0; }
       <div class="start-top">
         ${decks.some(isActive) || fehlerOn() || hardOn() ? startButton(level, p) : `<p class="all-done">${tr('No hay ningún mazo marcado para estos niveles.', 'No decks are ticked for these levels.')}</p><button class="btn" type="button" data-act="settings" data-focus="sec-decks">${tr('Elegir mazos en Ajustes', 'Choose decks in Settings')}</button>`}
       </div>
-      ${curLang() !== 'de' ? '' : `<button class="btn comp-entry" type="button" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('10 preguntas · se juega en tu página de FlaXCards', '10 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('10 preguntas · clasificación de la semana', '10 questions · weekly leaderboard')}</small></span></button>`}
+      <button class="btn comp-entry" type="button" data-lang="${curLang()}" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('10 preguntas · se juega en tu página de FlaXCards', '10 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('10 preguntas · clasificación de la semana', '10 questions · weekly leaderboard')}</small></span></button>
       ${firstUse ? `<p class="intro">${tr('Marca abajo los niveles, elige los mazos en Ajustes y pulsa «Empezar». Desliza la tarjeta a la derecha si te la sabes, a la izquierda si no, y hacia arriba para repasarla en breve.', 'Tick the levels below, choose the decks in Settings and tap ‘Start’. Swipe the card right if you know it, left if you don’t, and up to see it again shortly.')}</p>` : ''}
       ${progressStrip(today)}
       ${levelTabs(today)}
@@ -3473,7 +3477,28 @@ h1, h2, p { margin: 0; }
   // competition's own page
   const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {} };
   const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  const COMP_LANGUAGES = {
+    de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'] },
+    en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'] },
+    it: { name: ['Italiano', 'Italian'], prompt: ['¿Cómo se dice en italiano?', 'How do you say it in Italian?'] },
+  };
+  const compValidLanguage = (language) => Object.hasOwn(COMP_LANGUAGES, language);
+  function compInitialLanguage() {
+    try {
+      const requested = new URLSearchParams(location.search).get('lang');
+      if (compValidLanguage(requested)) return requested;
+      const stored = localStorage.getItem('flaxcards.competition.language');
+      if (COMP_ALONE && compValidLanguage(stored)) return stored;
+      const study = JSON.parse(localStorage.getItem('karteikasten.v1') || '{}').settings?.lang;
+      if (compValidLanguage(study)) return study;
+    } catch (e) {
+      /* default language when storage is unavailable */
+    }
+    return 'de';
+  }
   const comp = {
+    language: compInitialLanguage(),
+    multilingual: null, // false when an older server does not yet accept p_language
     client: null,
     loading: null,
     user: null,
@@ -3497,8 +3522,10 @@ h1, h2, p { margin: 0; }
 
   // [Spanish, English] texts, chosen with tr(...pair) when the message is shown
   const COMP_ERRORS = {
-    daily_limit: ['Ya has jugado tus partidas puntuables de hoy. Puedes seguir en modo práctica: no suma puntos.', 'You have already played today’s ranked games. You can carry on in practice mode: it does not add points.'],
-    active_session: ['Tienes una partida puntuable abierta. Continúala o abandónala.', 'You have a ranked game open. Continue it or abandon it.'],
+    daily_limit: ['Ya has jugado tus partidas puntuables de hoy en este idioma. Puedes seguir en modo práctica: no suma puntos.', 'You have already played today’s ranked games in this language. You can carry on in practice mode: it does not add points.'],
+    active_session: ['Tienes una partida puntuable abierta en este idioma. Continúala o abandónala.', 'You have a ranked game open in this language. Continue it or abandon it.'],
+    invalid_language: ['Ese idioma no está disponible en la competición.', 'That language is not available in the competition.'],
+    language_update_pending: ['La competición de este idioma está pendiente de activación. Puedes seguir compitiendo en alemán.', 'Competition in this language is awaiting activation. You can keep competing in German.'],
     session_expired: ['Se acabaron los 10 minutos: esta partida no suma puntos.', 'The 10 minutes are up: this game does not add points.'],
     session_closed: ['Esa partida ya está cerrada.', 'That game is already closed.'],
     session_not_found: ['No se encuentra esa partida.', 'That game cannot be found.'],
@@ -3556,7 +3583,20 @@ h1, h2, p { margin: 0; }
   }
   async function rpc(fn, args) {
     const c = await compClient();
-    const { data, error } = await c.rpc(fn, args || {});
+    const languageRequest = args && Object.hasOwn(args, 'p_language');
+    const legacyArgs = { ...(args || {}) };
+    delete legacyArgs.p_language;
+    if (languageRequest && comp.multilingual === false && args.p_language !== 'de') throw new Error('language_update_pending');
+    let { data, error } = await c.rpc(fn, languageRequest && comp.multilingual === false ? legacyArgs : args || {});
+    if (languageRequest && error?.code === 'PGRST202') {
+      comp.multilingual = false;
+      // A missing signature means the request was never executed. Retry German only:
+      // starting an English/Italian game through the old API would spend a German slot.
+      if (args.p_language !== 'de') throw new Error('language_update_pending');
+      ({ data, error } = await c.rpc(fn, legacyArgs));
+    } else if (languageRequest && !error && comp.multilingual !== false) {
+      comp.multilingual = true;
+    }
     if (error) throw new Error(error.message || 'error');
     return data;
   }
@@ -3576,7 +3616,33 @@ h1, h2, p { margin: 0; }
     }
   }
 
-  async function compOpen() {
+  function compSetLanguage(language) {
+    if (!compValidLanguage(language)) throw new Error('invalid_language');
+    if (comp.language !== language) {
+      Object.assign(comp, { language, status: null, board: null, week: null, weeks: null, result: null });
+    }
+    try {
+      localStorage.setItem('flaxcards.competition.language', language);
+      if (COMP_ALONE) {
+        const url = new URL(location.href);
+        url.searchParams.set('lang', language);
+        history.replaceState(history.state, '', url);
+      }
+    } catch (e) {
+      /* remembered in memory */
+    }
+  }
+  async function compSelectLanguage(language) {
+    if (comp.busy || language === comp.language) return;
+    await compStep(async () => {
+      compSetLanguage(language);
+      render();
+      if (comp.user) await compLoad();
+    });
+  }
+  async function compOpen(language) {
+    if (comp.busy) return;
+    compSetLanguage(language || comp.language);
     go('compete');
     if (!COMP_ON) return;
     await compStep(async () => {
@@ -3588,7 +3654,10 @@ h1, h2, p { margin: 0; }
     });
   }
   async function compLoad() {
-    const [status, board] = await Promise.all([rpc('quiz_my_status', { p_week: comp.week }), rpc('quiz_leaderboard', { p_week: comp.week, p_limit: 100, p_offset: 0 })]);
+    const language = comp.language;
+    const week = comp.week;
+    const [status, board] = await Promise.all([rpc('quiz_my_status', { p_week: week, p_language: language }), rpc('quiz_leaderboard', { p_week: week, p_limit: 100, p_offset: 0, p_language: language })]);
+    if (language !== comp.language || week !== comp.week) return;
     comp.status = status;
     comp.board = board || [];
     try {
@@ -3627,7 +3696,13 @@ h1, h2, p { margin: 0; }
     }
     comp.notice = '';
     compHooks.signedIn();
-    await compLoad();
+    try {
+      await compLoad();
+    } catch (e) {
+      // Signing in and studying must keep working while a new competition language
+      // awaits server activation. Its competition screen explains the pending state.
+      if (e.message !== 'language_update_pending') throw e;
+    }
   }
   async function compResend() {
     const c = await compClient();
@@ -3683,6 +3758,7 @@ h1, h2, p { margin: 0; }
     }
   }
   function beginGame(game) {
+    compSetLanguage(game.language || comp.language);
     comp.game = game;
     comp.result = null;
     try {
@@ -3697,7 +3773,7 @@ h1, h2, p { margin: 0; }
     comp.tick = setInterval(quizTick, 1000);
   }
   async function compPlay(mode) {
-    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode })));
+    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode, p_language: comp.language })));
   }
   async function compResume(id) {
     await compStep(async () => beginGame(await rpc('quiz_resume', { p_session: id })));
@@ -3732,7 +3808,9 @@ h1, h2, p { margin: 0; }
     const answers = game.questions.map((q) => ({ question_id: q.question_id, option_id: comp.answers[q.question_id] || null }));
     await compStep(async () => {
       try {
-        comp.result = await rpc('quiz_finish', { p_session: game.session_id, p_answers: answers });
+        const result = await rpc('quiz_finish', { p_session: game.session_id, p_answers: answers });
+        if (result.language) compSetLanguage(result.language);
+        comp.result = result;
       } finally {
         try {
           localStorage.removeItem(savedKey(game.session_id));
@@ -3790,18 +3868,40 @@ h1, h2, p { margin: 0; }
     </header>`;
   }
   const compError = () => (comp.error ? `<p class="comp-error" role="alert">${esc(comp.error)}</p>` : '');
+  const compLanguageName = (language = comp.language) => tr(...COMP_LANGUAGES[compValidLanguage(language) ? language : 'de'].name);
+  function compLanguageSelector() {
+    return `<section class="panel comp-language-picker" aria-label="${tr('Idioma de la competición', 'Competition language')}">
+      <div class="comp-languages" role="group" aria-label="${tr('Idioma', 'Language')}">
+        ${Object.keys(COMP_LANGUAGES).map((language) => `<button class="btn comp-language" type="button" data-act="comp-language" data-lang="${language}" aria-pressed="${language === comp.language}" ${comp.busy ? 'disabled' : ''}>${compLanguageName(language)}</button>`).join('')}
+      </div>
+      <p class="hint">${tr('Cada idioma tiene su propia clasificación y sus partidas puntuables diarias.', 'Each language has its own leaderboard and daily ranked games.')}</p>
+    </section>`;
+  }
 
   function viewCompete() {
     if (!COMP_ON) {
       return `${compTop(tr('Competición semanal', 'Weekly competition'))}
-      <main class="screen"><section class="panel">
+      <main class="screen">${compLanguageSelector()}<section class="panel">
         <h2 class="eyebrow">${tr('Aún no está conectada', 'Not connected yet')}</h2>
         <p>${tr('La competición necesita un servidor propio (un proyecto gratuito de Supabase) que todavía no se ha configurado en esta copia de FlaXCards.', 'The competition needs its own server (a free Supabase project), which has not been set up yet in this copy of FlaXCards.')}</p>
         <p class="hint">${tr('Quien mantiene la app debe crear el proyecto, aplicar <code>competition/supabase/migrations</code>, cargar las preguntas y poner la dirección y la clave pública en <code>competition/config.json</code> antes de generar la app. Todo está explicado en <code>competition/README.md</code>.', 'Whoever maintains the app must create the project, apply <code>competition/supabase/migrations</code>, load the questions and put the address and the public key in <code>competition/config.json</code> before building the app. It is all explained in <code>competition/README.md</code>.')}</p>
       </section></main>`;
     }
-    if (!comp.ready) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen"><p class="comp-wait">${tr('Conectando…', 'Connecting…')}</p>${compError()}</main>`;
-    if (!comp.user) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compAuthForm()}</main>`;
+    if (!comp.ready) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compLanguageSelector()}<p class="comp-wait">${tr('Conectando…', 'Connecting…')}</p>${compError()}</main>`;
+    if (!comp.user) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compLanguageSelector()}${compAuthForm()}</main>`;
+    if (comp.multilingual === false && comp.language !== 'de') {
+      return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">
+        ${compLanguageSelector()}
+        <section class="panel comp-pending" role="status">
+          <h2 class="eyebrow">${compLanguageName()}</h2>
+          <p>${tr(...COMP_ERRORS.language_update_pending)}</p>
+          <div class="btn-stack">
+            <button class="btn btn-primary" type="button" data-act="comp-language" data-lang="de">${tr('Ir a la competición de alemán', 'Go to German competition')}</button>
+            <button class="btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>${tr('Comprobar disponibilidad', 'Check availability')}</button>
+          </div>
+        </section>
+      </main>`;
+    }
     const st = comp.status || {};
     const current = !comp.week;
     const left = st.competitive_left_today ?? 0;
@@ -3820,6 +3920,7 @@ h1, h2, p { margin: 0; }
       : '';
     return `${compTop(tr('Competición semanal', 'Weekly competition'))}
     <main class="screen">
+      ${compLanguageSelector()}
       ${compError()}
       <section class="panel comp-week" aria-labelledby="h-week">
         <h2 class="eyebrow" id="h-week">${current ? tr('Esta semana', 'This week') : tr('Semana', 'Week')} · ${st.week_start ? fmtWeek(st.week_start) : ''}</h2>
@@ -3832,7 +3933,7 @@ h1, h2, p { margin: 0; }
         ${playBlock}
       </section>
       <section class="panel" aria-labelledby="h-board">
-        <div class="board-head"><h2 class="eyebrow" id="h-board">${tr('Clasificación', 'Leaderboard')}${current ? '' : ` · ${fmtWeek(comp.week)}`}</h2><button class="link-btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>${tr('Actualizar', 'Refresh')}</button></div>
+        <div class="board-head"><h2 class="eyebrow" id="h-board">${tr('Clasificación', 'Leaderboard')} · ${compLanguageName()}${current ? '' : ` · ${fmtWeek(comp.week)}`}</h2><button class="link-btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>${tr('Actualizar', 'Refresh')}</button></div>
         ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
         ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
         <div class="btn-row">
@@ -3857,7 +3958,7 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).', 'The weekly leaderboard needs an account (just an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario alemán por partida.', ' Each game has 10 German vocabulary questions.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).', 'The weekly leaderboard needs an account (just an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
@@ -3877,6 +3978,7 @@ h1, h2, p { margin: 0; }
     const q = g.questions[comp.index];
     const chosen = comp.answers[q.question_id];
     const counted = g.counted;
+    const language = compValidLanguage(g.language) ? g.language : comp.language;
     return `<div class="quiz">
       <header class="study-bar">
         <button class="icon-btn" type="button" data-act="comp-abandon-open" data-id="${esc(g.session_id)}" aria-label="${tr('Abandonar la partida', 'Abandon the game')}">${ICON.close}</button>
@@ -3885,10 +3987,10 @@ h1, h2, p { margin: 0; }
       </header>
       ${compError()}
       <main class="quiz-body">
-        <p class="eyebrow">${tr('¿Cómo se dice en alemán?', 'How do you say it in German?')}</p>
+        <p class="eyebrow">${tr(...COMP_LANGUAGES[language].prompt)}</p>
         <h2 class="quiz-q" lang="es">${esc(q.statement)}</h2>
         <div class="quiz-options">
-          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="de" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
+          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="${language}" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
         </div>
         <div class="quiz-nav">
           <button class="link-btn" type="button" data-act="comp-prev" ${comp.index === 0 ? 'disabled' : ''}>‹ ${tr('Anterior', 'Previous')}</button>
@@ -3902,13 +4004,14 @@ h1, h2, p { margin: 0; }
   function viewQuizResult() {
     const r = comp.result;
     if (!r) return viewCompete();
+    const language = compValidLanguage(r.language) ? r.language : comp.language;
     const items = (r.review || [])
-      .map((x) => `<li class="${x.is_correct ? 'is-ok' : 'is-bad'}"><span class="rv-q" lang="es">${esc(x.statement)}</span><span class="rv-a" lang="de">${esc(x.correct_text)}</span><span class="rv-mark">${x.is_correct ? '✓' : x.selected_option_id ? '✗' : '—'}</span></li>`)
+      .map((x) => `<li class="${x.is_correct ? 'is-ok' : 'is-bad'}"><span class="rv-q" lang="es">${esc(x.statement)}</span><span class="rv-a" lang="${language}">${esc(x.correct_text)}</span><span class="rv-mark">${x.is_correct ? '✓' : x.selected_option_id ? '✗' : '—'}</span></li>`)
       .join('');
     return `${compTop(tr('Resultado', 'Result'), 'compete')}
     <main class="screen">
       <section class="panel">
-        <p class="eyebrow">${r.counted ? tr('Partida puntuable', 'Ranked game') : tr('Partida de práctica · no suma puntos', 'Practice game · no points')}</p>
+        <p class="eyebrow">${compLanguageName(language)} · ${r.counted ? tr('Partida puntuable', 'Ranked game') : tr('Partida de práctica · no suma puntos', 'Practice game · no points')}</p>
         <div class="stats">${stat(tr('Aciertos', 'Right'), r.correct)}${stat(tr('Fallos', 'Wrong'), r.incorrect)}${stat(tr('Puntos', 'Points'), r.score)}</div>
         ${r.counted ? `<p class="hint">${tr(`Llevas ${fmtInt(r.week_points || 0)} puntos esta semana${r.rank ? ` y vas en el puesto ${fmtInt(r.rank)}` : ''}.`, `You have ${fmtInt(r.week_points || 0)} points this week${r.rank ? ` and your rank is ${fmtInt(r.rank)}` : ''}.`)}</p>` : `<p class="hint">${tr('Las partidas de práctica no cuentan para la clasificación.', 'Practice games do not count towards the leaderboard.')}</p>`}
         <div class="btn-stack">
@@ -3936,7 +4039,10 @@ h1, h2, p { margin: 0; }
     switch (act) {
       case 'compete':
         comp.result = null;
-        compOpen();
+        compOpen(el.dataset.lang);
+        return true;
+      case 'comp-language':
+        compSelectLanguage(el.dataset.lang);
         return true;
       case 'comp-auth-mode':
         comp.authMode = comp.authMode === 'signup' ? 'login' : 'signup';
@@ -3982,11 +4088,12 @@ h1, h2, p { margin: 0; }
         compAbandon();
         return true;
       case 'comp-refresh':
+        comp.multilingual = null; // allow activation to be detected without signing out
         compStep(compLoad);
         return true;
       case 'comp-weeks':
         compStep(async () => {
-          const weeks = (await rpc('quiz_weeks', { p_limit: 12 })) || [];
+          const weeks = (await rpc('quiz_weeks', { p_limit: 12, p_language: comp.language })) || [];
           comp.weeks = weeks.filter((w) => !comp.status || w.week_start !== comp.status.week_start);
         });
         return true;
