@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FlaXCards · Competición semanal</title>
-<meta name="description" content="Competiciones de alemán, inglés e italiano: 10 preguntas por partida y clasificación semanal por idioma">
+<meta name="description" content="Competiciones de alemán, inglés, italiano y francés: 10 preguntas por partida y clasificación semanal por idioma">
 <meta name="theme-color" content="#edf0f4" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0f141a" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
@@ -747,6 +747,11 @@ h1, h2, p { margin: 0; }
 .kcard[data-swipe="right"] .stamp-know,
 .kcard[data-swipe="left"] .stamp-dont,
 .kcard[data-swipe="up"] .stamp-later { opacity: var(--p, 0); }
+.card-sources { margin-top: 12px; color: var(--muted); font-size: 0.7rem; line-height: 1.5; text-align: left; }
+.card-sources summary { cursor: pointer; }
+.card-sources ul { padding-left: 18px; margin: 6px 0; }
+.card-sources a { color: inherit; overflow-wrap: anywhere; }
+.card-sources p { margin: 6px 0 0; }
 .link-btn {
   padding: 6px 10px;
   border: 0;
@@ -1219,8 +1224,10 @@ h1, h2, p { margin: 0; }
     de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'] },
     en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'] },
     it: { name: ['Italiano', 'Italian'], prompt: ['¿Cómo se dice en italiano?', 'How do you say it in Italian?'] },
+    fr: { name: ['Francés', 'French'], prompt: ['¿Cómo se dice en francés?', 'How do you say it in French?'] },
   };
   const compValidLanguage = (language) => Object.hasOwn(COMP_LANGUAGES, language);
+  const compPendingLanguages = new Set(); // a server may support earlier languages before a newly added one
   function compInitialLanguage() {
     try {
       const requested = new URLSearchParams(location.search).get('lang');
@@ -1324,16 +1331,21 @@ h1, h2, p { margin: 0; }
     const languageRequest = args && Object.hasOwn(args, 'p_language');
     const legacyArgs = { ...(args || {}) };
     delete legacyArgs.p_language;
+    if (languageRequest && compPendingLanguages.has(args.p_language)) throw new Error('language_update_pending');
     if (languageRequest && comp.multilingual === false && args.p_language !== 'de') throw new Error('language_update_pending');
     let { data, error } = await c.rpc(fn, languageRequest && comp.multilingual === false ? legacyArgs : args || {});
     if (languageRequest && error?.code === 'PGRST202') {
       comp.multilingual = false;
       // A missing signature means the request was never executed. Retry German only:
-      // starting an English/Italian game through the old API would spend a German slot.
+      // starting another language through the old API would spend a German slot.
       if (args.p_language !== 'de') throw new Error('language_update_pending');
       ({ data, error } = await c.rpc(fn, legacyArgs));
     } else if (languageRequest && !error && comp.multilingual !== false) {
       comp.multilingual = true;
+    }
+    if (languageRequest && error?.message === 'invalid_language' && compValidLanguage(args.p_language)) {
+      compPendingLanguages.add(args.p_language);
+      throw new Error('language_update_pending');
     }
     if (error) throw new Error(error.message || 'error');
     return data;
@@ -1627,7 +1639,7 @@ h1, h2, p { margin: 0; }
     }
     if (!comp.ready) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compLanguageSelector()}<p class="comp-wait">${tr('Conectando…', 'Connecting…')}</p>${compError()}</main>`;
     if (!comp.user) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compLanguageSelector()}${compAuthForm()}</main>`;
-    if (comp.multilingual === false && comp.language !== 'de') {
+    if ((comp.multilingual === false && comp.language !== 'de') || compPendingLanguages.has(comp.language)) {
       return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">
         ${compLanguageSelector()}
         <section class="panel comp-pending" role="status">
@@ -1827,6 +1839,7 @@ h1, h2, p { margin: 0; }
         return true;
       case 'comp-refresh':
         comp.multilingual = null; // allow activation to be detected without signing out
+        compPendingLanguages.delete(comp.language);
         compStep(compLoad);
         return true;
       case 'comp-weeks':
