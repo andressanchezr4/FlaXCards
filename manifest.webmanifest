@@ -1,7 +1,7 @@
 {
   "name": "FlaXCards",
   "short_name": "FlaXCards",
-  "description": "Tarjetas de alemán, inglés, italiano y francés con repaso espaciado, de A1 a C2",
+  "description": "Tarjetas de alemán, inglés, italiano, francés y portugués con repaso espaciado, de A1 a C2",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
