@@ -1207,6 +1207,9 @@ h1, h2, p { margin: 0; }
     }
   })();
   const COMP_ON = !!(COMP_CFG.url && COMP_CFG.anonKey);
+  // what the app does when an account signs in or out (it saves the study progress there); nothing in the
+  // competition's own page
+  const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {} };
   const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
   const comp = {
     client: null,
@@ -1361,6 +1364,7 @@ h1, h2, p { margin: 0; }
       comp.user = data.user;
     }
     comp.notice = '';
+    compHooks.signedIn();
     await compLoad();
   }
   async function compResend() {
@@ -1382,6 +1386,7 @@ h1, h2, p { margin: 0; }
         comp.user = data && data.session ? data.session.user : null;
         comp.ready = true;
         if (!comp.user) throw new Error('link_expired');
+        compHooks.signedIn();
         toast(tr('Correo confirmado: ya has entrado con tu cuenta.', 'Email confirmed: you are now signed in.'));
       } finally {
         history.replaceState(history.state, '', compHere());
@@ -1390,6 +1395,7 @@ h1, h2, p { margin: 0; }
   }
   async function compSignOut() {
     try {
+      await compHooks.signingOut().catch(() => {}); // what is left of the study progress goes first
       const c = await compClient();
       await c.auth.signOut();
     } finally {
@@ -1401,6 +1407,7 @@ h1, h2, p { margin: 0; }
         /* nothing kept */
       }
       Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null });
+      compHooks.signedOut();
     }
   }
 
