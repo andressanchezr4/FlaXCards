@@ -1168,7 +1168,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.14';
+  const VERSION = '5.15';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -3569,7 +3569,10 @@ h1, h2, p { margin: 0; }
   // what the app does when an account signs in or out (it saves the study progress there); nothing in the
   // competition's own page
   const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {} };
-  const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
+  // the npm file itself (not a minified copy made by the CDN), checked against its hash: if the CDN ever served
+  // anything else, the browser would not run it (it could read the session)
+  const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
+  const SUPABASE_JS_SRI = 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o';
   const COMP_LANGUAGES = {
     de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'] },
     en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'] },
@@ -3670,6 +3673,8 @@ h1, h2, p { margin: 0; }
         if (window.supabase && window.supabase.createClient) return done();
         const s = document.createElement('script');
         s.src = SUPABASE_JS;
+        s.integrity = SUPABASE_JS_SRI;
+        s.crossOrigin = 'anonymous';
         s.onload = done;
         s.onerror = () => reject(new Error('load_failed'));
         document.head.appendChild(s);
