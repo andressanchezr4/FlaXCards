@@ -1058,6 +1058,8 @@ h1, h2, p { margin: 0; }
 .comp-language-picker .hint { margin-bottom: 0; }
 .comp-error { padding: 10px 12px; border-radius: 10px; background: var(--again-bg); color: var(--again-ink); font-weight: 700; }
 .comp-notice { padding: 10px 12px; border-radius: 10px; background: var(--miss-bg); color: var(--miss-ink); }
+.comp-delete { margin-top: 12px; padding: 12px; border: 1px solid var(--again-ink); border-radius: 10px; }
+.comp-delete p { margin: 0 0 10px; }
 .comp-wait { text-align: center; color: var(--muted); padding: 24px 0; }
 .comp-form { display: grid; gap: 10px; }
 .comp-form input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; }
@@ -1267,6 +1269,7 @@ h1, h2, p { margin: 0; }
     authMode: 'login',
     email: '', // the address typed last, kept for the sign-in form
     unconfirmed: '', // an account waiting for its confirmation email
+    confirmDelete: false, // the warning before deleting the account is open
     tick: 0,
   };
 
@@ -1290,6 +1293,8 @@ h1, h2, p { margin: 0; }
     'Invalid login credentials': ['Correo o contraseña incorrectos.', 'Wrong email or password.'],
     'Email not confirmed': ['Confirma primero tu correo (te hemos enviado un enlace).', 'Confirm your email first (we have sent you a link).'],
     'User already registered': ['Ya hay una cuenta con ese correo.', 'There is already an account with that email.'],
+    // the server refuses a second account for the same mailbox (name+x@…, another case, Gmail dots)
+    'Database error saving new user': ['Ya hay una cuenta con ese correo (o con otra forma de la misma dirección, como nombre+algo@…).', 'There is already an account with that email (or another form of the same address, such as name+something@…).'],
     'Failed to fetch': ['Sin conexión con el servidor de la competición.', 'No connection to the competition server.'],
     link_expired: ['El enlace ha caducado o ya se había usado. Entra con tu correo y contraseña; si aún no confirmaste la cuenta, pide otro correo.', 'The link has expired or has already been used. Sign in with your email and password; if you have not confirmed your account yet, ask for another email.'],
     'Email rate limit exceeded': ['Se han enviado demasiados correos. Espera un rato y vuelve a intentarlo.', 'Too many emails have been sent. Wait a while and try again.'],
@@ -1485,11 +1490,12 @@ h1, h2, p { margin: 0; }
       }
     });
   }
-  async function compSignOut() {
+  // deleted: the account no longer exists, so nothing is sent first and only this device signs out
+  async function compSignOut({ deleted = false } = {}) {
     try {
-      await compHooks.signingOut().catch(() => {}); // what is left of the study progress goes first
+      if (!deleted) await compHooks.signingOut().catch(() => {}); // what is left of the study progress goes first
       const c = await compClient();
-      await c.auth.signOut();
+      await c.auth.signOut(deleted ? { scope: 'local' } : undefined);
     } finally {
       // signed out on this device even if the server could not be reached
       try {
@@ -1498,9 +1504,15 @@ h1, h2, p { margin: 0; }
       } catch (e) {
         /* nothing kept */
       }
-      Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null });
+      Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null, confirmDelete: false });
       compHooks.signedOut();
     }
+  }
+  // the server deletes the account and everything of it (delete_my_account); the progress on this device stays
+  async function compDeleteAccount() {
+    await rpc('delete_my_account');
+    await compSignOut({ deleted: true });
+    toast(tr('Tu cuenta se ha borrado.', 'Your account has been deleted.'));
   }
 
   // ---- a game
@@ -1704,6 +1716,11 @@ h1, h2, p { margin: 0; }
         </form>
         <p class="hint">${esc(comp.user.email || '')}</p>
         <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
+        ${
+          comp.confirmDelete
+            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre en la clasificación, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your name on the leaderboard, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
+            : `<p><button class="link-btn" type="button" data-act="comp-delete-open">${tr('Borrar mi cuenta', 'Delete my account')}</button></p>`
+        }
       </section>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
     </main>`;
@@ -1859,6 +1876,14 @@ h1, h2, p { margin: 0; }
         return true;
       case 'comp-signout':
         compStep(compSignOut);
+        return true;
+      case 'comp-delete-open':
+      case 'comp-delete-cancel':
+        comp.confirmDelete = el.dataset.act === 'comp-delete-open';
+        render();
+        return true;
+      case 'comp-delete':
+        compStep(compDeleteAccount);
         return true;
       default:
         return false;
