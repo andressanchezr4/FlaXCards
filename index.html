@@ -1066,6 +1066,11 @@ h1, h2, p { margin: 0; }
 .comp-wait { text-align: center; color: var(--muted); padding: 24px 0; }
 .comp-form { display: grid; gap: 10px; }
 .comp-form input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; }
+.field > .pw { display: block; position: relative; font-weight: 400; }
+.pw input { padding-right: 48px; }
+.pw-eye { position: absolute; top: 0; right: 0; width: 44px; height: 100%; min-height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); cursor: pointer; }
+.pw-eye:hover, .pw-eye[aria-pressed="true"] { color: var(--ink); }
+.pw-eye svg { width: 20px; height: 20px; }
 .comp-badge { padding: 4px 10px; border-radius: 999px; font-size: 0.8125rem; font-weight: 700; white-space: nowrap; }
 .comp-badge.is-counted { background: var(--met-bg); color: var(--met-ink); }
 .comp-badge.is-practice { background: var(--paper-2); color: var(--ink-2); border: 1px solid var(--line); }
@@ -1163,7 +1168,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.13';
+  const VERSION = '5.14';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -3625,6 +3630,7 @@ h1, h2, p { margin: 0; }
     not_enough_questions: ['El servidor todavía no tiene preguntas suficientes.', 'The server does not have enough questions yet.'],
     invalid_answers: ['Las respuestas no son válidas.', 'The answers are not valid.'],
     username_taken: ['Ese nombre ya lo usa otra persona.', 'Someone else is already using that name.'],
+    password_mismatch: ['Las dos contraseñas no coinciden: escríbelas otra vez.', 'The two passwords do not match: type them again.'],
     invalid_username: ['El nombre debe tener de 3 a 24 letras, números o «_ . -».', 'The name must have 3 to 24 letters, numbers or ‘_ . -’.'],
     profile_missing: ['Tu cuenta no tiene perfil todavía. Vuelve a entrar.', 'Your account has no profile yet. Sign in again.'],
     load_failed: ['No se pudo cargar la conexión con el servidor de la competición.', 'Could not load the connection to the competition server.'],
@@ -3766,6 +3772,22 @@ h1, h2, p { margin: 0; }
   }
 
   // ---- account
+  // a password field with an eye that shows or hides what is typed (only that field, without redrawing the form)
+  const EYE = {
+    show: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>',
+    hide: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  };
+  const passwordInput = (name, autocomplete) =>
+    `<span class="pw"><input name="${name}" type="password" required minlength="8" autocomplete="${autocomplete}"><button class="pw-eye" type="button" data-act="comp-eye" aria-pressed="false" aria-label="${tr('Mostrar la contraseña', 'Show the password')}">${EYE.show}</button></span>`;
+  function togglePassword(btn) {
+    const input = btn.parentElement.querySelector('input');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.setAttribute('aria-pressed', String(show));
+    btn.setAttribute('aria-label', show ? tr('Ocultar la contraseña', 'Hide the password') : tr('Mostrar la contraseña', 'Show the password'));
+    btn.innerHTML = show ? EYE.hide : EYE.show;
+  }
+
   async function compAuth(form) {
     const email = form.email.value.trim();
     const password = form.password.value;
@@ -3775,6 +3797,7 @@ h1, h2, p { margin: 0; }
     if (comp.authMode === 'signup') {
       const username = form.username.value.trim();
       if (!/^[A-Za-z0-9_.-]{3,24}$/.test(username)) throw new Error('invalid_username');
+      if (form.password2.value !== password) throw new Error('password_mismatch');
       const { data, error } = await c.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: compHere() } });
       if (error) throw new Error(error.message);
       if (!data.session) {
@@ -4074,7 +4097,8 @@ h1, h2, p { margin: 0; }
       <form class="comp-form" data-form="comp-auth">
         ${signup ? `<label class="field"><span>${tr('Nombre en la clasificación', 'Name on the leaderboard')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="nickname"></label>` : ''}
         <label class="field"><span>${tr('Correo', 'Email')}</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>
-        <label class="field"><span>${tr('Contraseña', 'Password')}</span><input name="password" type="password" required minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
+        <label class="field"><span>${tr('Contraseña', 'Password')}</span>${passwordInput('password', signup ? 'new-password' : 'current-password')}</label>
+        ${signup ? `<label class="field"><span>${tr('Repite la contraseña', 'Repeat the password')}</span>${passwordInput('password2', 'new-password')}</label>` : ''}
         <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${signup ? tr('Crear cuenta', 'Create account') : tr('Entrar', 'Sign in')}</button>
       </form>
       ${comp.unconfirmed ? `<button class="link-btn" type="button" data-act="comp-resend" ${comp.busy ? 'disabled' : ''}>${tr('Reenviar el correo de confirmación', 'Resend the confirmation email')}</button>` : ''}
@@ -4160,6 +4184,9 @@ h1, h2, p { margin: 0; }
         comp.notice = '';
         comp.unconfirmed = '';
         render();
+        return true;
+      case 'comp-eye':
+        togglePassword(el);
         return true;
       case 'comp-resend':
         compStep(compResend);
