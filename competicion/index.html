@@ -849,6 +849,11 @@ h1, h2, p { margin: 0; }
 .kcard-ex { display: grid; gap: 4px; padding: 10px 12px; background: var(--paper-2); border-radius: 8px; }
 .ex-de { font-size: 1.0625rem; }
 .ex-es { font-size: 0.9375rem; color: var(--muted); }
+/* Chinese: the pinyin under the word and under each example sentence */
+.kcard-py { font-size: 1.125rem; color: var(--ink-2); }
+.ex-py { font-size: 0.9375rem; color: var(--ink-2); }
+/* simplified-character glyphs (not the Japanese ones) wherever the system has them */
+:lang(zh) { font-family: "Atkinson Hyperlegible", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif; }
 .kcard-note { font-size: 0.9375rem; color: var(--ink-2); }
 .note-label {
   margin-right: 8px;
@@ -1116,7 +1121,7 @@ h1, h2, p { margin: 0; }
 .al-3 { background: var(--al-3); }
 .al-4 { background: var(--al-4); }
 .al-5 { background: var(--al-5); }
-.ex-es .al { color: var(--ink-2); }
+.ex-es .al, .ex-py .al { color: var(--ink-2); }
 
 /* the same pairs with coloured letters instead of a coloured background (Ajustes › Estudio) */
 :root { --alt-1: #a16207; --alt-2: #6d28d9; --alt-3: #15803d; --alt-4: #0369a1; --alt-5: #be185d; }
