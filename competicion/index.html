@@ -468,7 +468,18 @@ h1, h2, p { margin: 0; }
 .lang-name { margin-top: 6px; font: 700 1.625rem/1.1 var(--font-display); }
 .lang-sub { color: var(--ink-2); }
 .lang-stats { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 4px; font-size: 0.8125rem; color: var(--muted); }
-.lang-stats .flame { width: 14px; height: 14px; }
+/* the streak on the languages screen: the flame grey until today's practice is done, red after it */
+.streak-hero { display: flex; align-items: center; gap: 14px; margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+.streak-flame .flame { width: 44px; height: 44px; fill: var(--muted); opacity: 0.55; }
+.streak-hero.is-met .streak-flame .flame { fill: #e03131; opacity: 1; }
+.streak-hero.is-met { border-color: #e03131; }
+.streak-body { display: grid; gap: 2px; min-width: 0; }
+.streak-num { font-size: 1.0625rem; color: var(--ink-2); }
+.streak-num b { font-size: 1.75rem; color: var(--ink); margin-right: 2px; }
+.streak-today { font-weight: 700; color: var(--ink); }
+.streak-hero.is-met .streak-today { color: #c92a2a; }
+.streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
+.streak-meta svg { width: 14px; height: 14px; }
 /* language home: the known words take the place of the app name */
 .home-top { gap: 6px; }
 .home-top .hero { flex: 1; min-width: 0; padding: 0; gap: 10px; }
@@ -668,6 +679,9 @@ h1, h2, p { margin: 0; }
   padding-block: 6px 12px;
 }
 .study-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+/* how far the batch or the game has got */
+.run-bar { height: 6px; margin: 8px 0 2px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.run-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width 0.3s ease; }
 .counts {
   display: flex;
   flex-wrap: wrap;
@@ -1187,6 +1201,12 @@ h1, h2, p { margin: 0; }
     close: '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
   };
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
+  // how far the game has got: a thin bar under its top bar (as in app.js)
+  function progressBar(done, total, what) {
+    const all = Math.max(1, total, done);
+    const now = Math.min(all, Math.max(0, done));
+    return `<div class="run-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${all}" aria-valuenow="${now}" aria-label="${esc(`${now} / ${all} ${what}`)}"><i style="width:${(100 * now) / all}%"></i></div>`;
+  }
   const fmtInt = (n) => n.toLocaleString(LOCALE());
   const stat = (label, value, unit) =>
     `<div class="stat"><span class="stat-label">${label}</span><span class="stat-value">${value}${unit ? ` <small>${unit}</small>` : ''}</span></div>`;
@@ -1230,11 +1250,11 @@ h1, h2, p { margin: 0; }
   const COMP_ON = !!(COMP_CFG.url && COMP_CFG.anonKey);
   // what the app does when an account signs in or out (it saves the study progress there); nothing in the
   // competition's own page
-  const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {}, sessionChanged() {} };
+  const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {}, sessionChanging() {}, sessionChanged() {} };
   // the npm file itself (not a minified copy made by the CDN), checked against its hash: if the CDN ever served
   // anything else, the browser would not run it (it could read the session)
-  const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
-  const SUPABASE_JS_SRI = 'sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o';
+  const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js';
+  const SUPABASE_JS_SRI = 'sha384-K0oxqktRvaThvYgGL4G+OK2Ih6VS6Uyu7j3+7WJgp/uWM0Yv6Xi4YEiw0BB+mPfi';
   const COMP_LANGUAGES = {
     de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'] },
     en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'] },
@@ -1262,6 +1282,7 @@ h1, h2, p { margin: 0; }
     client: null,
     loading: null,
     user: null,
+    accountEpoch: 0,
     ready: false, // the session has been checked
     status: null, // quiz_my_status of the week on screen
     board: null, // the ranking on screen
@@ -1320,16 +1341,27 @@ h1, h2, p { margin: 0; }
   // the page was opened from that link: the session (or the error) comes in the address
   const COMP_RETURN = /(^|[#&?])(access_token|error_description)=/.test(location.hash + location.search);
 
+  function compSetUser(user) {
+    const changed = (comp.user?.id || null) !== (user?.id || null);
+    if (changed) {
+      comp.accountEpoch += 1;
+      Object.assign(comp, { status: null, board: null, game: null, result: null, weeks: null, answers: {} });
+    }
+    comp.user = user;
+    return changed;
+  }
   function compObserveAuth(client) {
     if (typeof client.auth.onAuthStateChange !== 'function') return;
     client.auth.onAuthStateChange((event, session) => {
       if (!['INITIAL_SESSION', 'SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) return;
-      // Outside the auth callback/SDK lock: another tab may have changed account.
+      // Invalidate old requests immediately. Only starting new SDK calls must
+      // wait until after the auth callback/SDK lock has returned.
+      const user = session?.user || null;
+      const changed = compSetUser(user);
+      const epoch = comp.accountEpoch;
+      compHooks.sessionChanging(user);
       setTimeout(() => {
-        const user = session?.user || null;
-        const changed = (comp.user?.id || null) !== (user?.id || null);
-        if (changed) Object.assign(comp, { status: null, board: null, game: null, result: null, weeks: null, answers: {} });
-        comp.user = user;
+        if (epoch !== comp.accountEpoch) return;
         compHooks.sessionChanged(user);
         if (changed) render();
       }, 0);
@@ -1365,19 +1397,27 @@ h1, h2, p { margin: 0; }
     return comp.loading;
   }
   async function rpc(fn, args) {
+    const epoch = comp.accountEpoch;
+    const uid = comp.user?.id || null;
+    const checkAccount = () => {
+      if (epoch !== comp.accountEpoch || uid !== (comp.user?.id || null)) throw new Error('account_changed');
+    };
     const c = await compClient();
+    checkAccount();
     const languageRequest = args && Object.hasOwn(args, 'p_language');
     const legacyArgs = { ...(args || {}) };
     delete legacyArgs.p_language;
     if (languageRequest && compPendingLanguages.has(args.p_language)) throw new Error('language_update_pending');
     if (languageRequest && comp.multilingual === false && args.p_language !== 'de') throw new Error('language_update_pending');
     let { data, error } = await c.rpc(fn, languageRequest && comp.multilingual === false ? legacyArgs : args || {});
+    checkAccount();
     if (languageRequest && error?.code === 'PGRST202') {
       comp.multilingual = false;
       // A missing signature means the request was never executed. Retry German only:
       // starting another language through the old API would spend a German slot.
       if (args.p_language !== 'de') throw new Error('language_update_pending');
       ({ data, error } = await c.rpc(fn, legacyArgs));
+      checkAccount();
     } else if (languageRequest && !error && comp.multilingual !== false) {
       comp.multilingual = true;
     }
@@ -1397,7 +1437,7 @@ h1, h2, p { margin: 0; }
     try {
       await fn();
     } catch (e) {
-      comp.error = compMsg(e);
+      if (e.message !== 'account_changed') comp.error = compMsg(e);
     } finally {
       comp.busy = false;
       render();
@@ -1436,16 +1476,17 @@ h1, h2, p { margin: 0; }
     await compStep(async () => {
       const c = await compClient();
       const { data } = await c.auth.getSession();
-      comp.user = data && data.session ? data.session.user : null;
+      compSetUser(data && data.session ? data.session.user : null);
       comp.ready = true;
       if (comp.user) await compLoad();
     });
   }
   async function compLoad() {
+    const epoch = comp.accountEpoch;
     const language = comp.language;
     const week = comp.week;
     const [status, board] = await Promise.all([rpc('quiz_my_status', { p_week: week, p_language: language }), rpc('quiz_leaderboard', { p_week: week, p_limit: 100, p_offset: 0, p_language: language })]);
-    if (language !== comp.language || week !== comp.week) return;
+    if (epoch !== comp.accountEpoch || language !== comp.language || week !== comp.week) return;
     comp.status = status;
     comp.board = board || [];
     try {
@@ -1490,14 +1531,14 @@ h1, h2, p { margin: 0; }
         comp.authMode = 'login';
         return;
       }
-      comp.user = data.session.user;
+      compSetUser(data.session.user);
     } else {
       const { data, error } = await c.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message === 'Email not confirmed') comp.unconfirmed = email;
         throw new Error(error.message);
       }
-      comp.user = data.user;
+      compSetUser(data.user);
     }
     comp.notice = '';
     compHooks.signedIn();
@@ -1525,7 +1566,7 @@ h1, h2, p { margin: 0; }
         if (params.get('error_description')) throw new Error(params.get('error_code') === 'otp_expired' || /expired|invalid/i.test(params.get('error_description')) ? 'link_expired' : params.get('error_description'));
         const c = await compClient();
         const { data } = await c.auth.getSession();
-        comp.user = data && data.session ? data.session.user : null;
+        compSetUser(data && data.session ? data.session.user : null);
         comp.ready = true;
         if (!comp.user) throw new Error('link_expired');
         compHooks.signedIn();
@@ -1540,7 +1581,7 @@ h1, h2, p { margin: 0; }
     try {
       if (!deleted) await compHooks.signingOut().catch(() => {}); // what is left of the study progress goes first
       const c = await compClient();
-      await c.auth.signOut(deleted ? { scope: 'local' } : undefined);
+      await c.auth.signOut({ scope: 'local' });
     } finally {
       // signed out on this device even if the server could not be reached
       try {
@@ -1549,7 +1590,8 @@ h1, h2, p { margin: 0; }
       } catch (e) {
         /* nothing kept */
       }
-      Object.assign(comp, { user: null, status: null, board: null, game: null, result: null, weeks: null, confirmDelete: false });
+      compSetUser(null);
+      Object.assign(comp, { status: null, board: null, game: null, result: null, weeks: null, confirmDelete: false });
       compHooks.signedOut();
     }
   }
@@ -1799,6 +1841,7 @@ h1, h2, p { margin: 0; }
         <span class="comp-badge ${counted ? 'is-counted' : 'is-practice'}">${counted ? tr('Puntuable', 'Ranked') : tr('Práctica · no suma', 'Practice · no points')}</span>
         <span class="quiz-meta"><span>${comp.index + 1} / ${g.questions.length}</span><span id="quiz-timer" class="quiz-timer">${fmtClock(quizSecondsLeft())}</span></span>
       </header>
+      ${progressBar(g.questions.filter((x) => comp.answers[x.question_id] != null).length, g.questions.length, tr('preguntas respondidas', 'questions answered'))}
       ${compError()}
       <main class="quiz-body">
         <p class="eyebrow">${tr(...COMP_LANGUAGES[language].prompt)}</p>
