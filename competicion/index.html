@@ -1230,7 +1230,7 @@ h1, h2, p { margin: 0; }
   const COMP_ON = !!(COMP_CFG.url && COMP_CFG.anonKey);
   // what the app does when an account signs in or out (it saves the study progress there); nothing in the
   // competition's own page
-  const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {} };
+  const compHooks = { signedIn() {}, async signingOut() {}, signedOut() {}, sessionChanged() {} };
   // the npm file itself (not a minified copy made by the CDN), checked against its hash: if the CDN ever served
   // anything else, the browser would not run it (it could read the session)
   const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js';
@@ -1320,6 +1320,22 @@ h1, h2, p { margin: 0; }
   // the page was opened from that link: the session (or the error) comes in the address
   const COMP_RETURN = /(^|[#&?])(access_token|error_description)=/.test(location.hash + location.search);
 
+  function compObserveAuth(client) {
+    if (typeof client.auth.onAuthStateChange !== 'function') return;
+    client.auth.onAuthStateChange((event, session) => {
+      if (!['INITIAL_SESSION', 'SIGNED_IN', 'SIGNED_OUT', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) return;
+      // Outside the auth callback/SDK lock: another tab may have changed account.
+      setTimeout(() => {
+        const user = session?.user || null;
+        const changed = (comp.user?.id || null) !== (user?.id || null);
+        if (changed) Object.assign(comp, { status: null, board: null, game: null, result: null, weeks: null, answers: {} });
+        comp.user = user;
+        compHooks.sessionChanged(user);
+        if (changed) render();
+      }, 0);
+    });
+  }
+
   function compClient() {
     if (comp.client) return Promise.resolve(comp.client);
     if (!comp.loading) {
@@ -1327,6 +1343,7 @@ h1, h2, p { margin: 0; }
         const done = () => {
           try {
             comp.client = window.supabase.createClient(COMP_CFG.url, COMP_CFG.anonKey, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'flaxcards.competition.auth' } });
+            compObserveAuth(comp.client);
             resolve(comp.client);
           } catch (e) {
             reject(new Error('load_failed'));
@@ -1724,17 +1741,13 @@ h1, h2, p { margin: 0; }
           ${stat(tr('Posición', 'Rank'), st.rank ? `${fmtInt(st.rank)}<small> ${tr('de', 'of')} ${fmtInt(st.players || 0)}</small>` : '—')}
           ${current ? stat(tr('Hoy quedan', 'Left today'), `${left}<small> ${tr('partidas', 'games')}</small>`) : stat(tr('Partidas', 'Games'), fmtInt(st.games_played || 0))}
         </div>
-        ${current ? `<p class="hint">${tr(`Cierra en ${fmtLeft(st.seconds_left)} (lunes a las 00:00, hora de España). Como mucho puedes sumar ${fmtInt(st.max_points_left || 0)} puntos más esta semana.`, `Closes in ${fmtLeft(st.seconds_left)} (Monday at 00:00, Spanish time). You can add at most ${fmtInt(st.max_points_left || 0)} more points this week.`)}</p>` : ''}
+        ${current ? `<p class="hint">${tr(`Cierra en ${fmtLeft(st.seconds_left)} (lunes a las 00:00, hora de España). Como mucho puedes sumar ${fmtInt(st.max_points_left || 0)} puntos más esta semana. Al cerrar, los tres primeros suman un podio a su perfil y las partidas de la semana se borran.`, `Closes in ${fmtLeft(st.seconds_left)} (Monday at 00:00, Spanish time). You can add at most ${fmtInt(st.max_points_left || 0)} more points this week. When it closes, the top three add a podium to their profile and the week’s games are deleted.`)}</p>` : ''}
         ${playBlock}
       </section>
       <section class="panel" aria-labelledby="h-board">
         <div class="board-head"><h2 class="eyebrow" id="h-board">${tr('Clasificación', 'Leaderboard')} · ${compLanguageName()}${current ? '' : ` · ${fmtWeek(comp.week)}`}</h2><button class="link-btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>${tr('Actualizar', 'Refresh')}</button></div>
         ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
         ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
-        <div class="btn-row">
-          ${current ? `<button class="btn" type="button" data-act="comp-weeks">${tr('Semanas anteriores', 'Previous weeks')}</button>` : `<button class="btn" type="button" data-act="comp-week" data-week="">${tr('Volver a esta semana', 'Back to this week')}</button>`}
-        </div>
-        ${comp.weeks ? `<ul class="weeks">${comp.weeks.map((w) => `<li><button class="link-btn" type="button" data-act="comp-week" data-week="${w.week_start}">${fmtWeek(w.week_start)}</button> · ${tr(`${fmtInt(w.players)} jugadores${w.my_points != null ? ` · tú: ${fmtInt(w.my_points)} puntos, puesto ${w.my_rank}` : ''}`, `${fmtInt(w.players)} players${w.my_points != null ? ` · you: ${fmtInt(w.my_points)} points, rank ${w.my_rank}` : ''}`)}</li>`).join('') || `<li>${tr('Todavía no hay semanas anteriores.', 'No previous weeks yet.')}</li>`}</ul>` : ''}
       </section>
       <section class="panel" aria-labelledby="h-profile">
         <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
@@ -1894,16 +1907,6 @@ h1, h2, p { margin: 0; }
       case 'comp-refresh':
         comp.multilingual = null; // allow activation to be detected without signing out
         compPendingLanguages.delete(comp.language);
-        compStep(compLoad);
-        return true;
-      case 'comp-weeks':
-        compStep(async () => {
-          const weeks = (await rpc('quiz_weeks', { p_limit: 12, p_language: comp.language })) || [];
-          comp.weeks = weeks.filter((w) => !comp.status || w.week_start !== comp.status.week_start);
-        });
-        return true;
-      case 'comp-week':
-        comp.week = el.dataset.week || null;
         compStep(compLoad);
         return true;
       case 'comp-signout':
