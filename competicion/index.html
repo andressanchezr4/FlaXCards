@@ -1832,13 +1832,13 @@ h1, h2, p { margin: 0; }
       </section>
       <section class="panel" aria-labelledby="h-profile">
         <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
-        <p class="comp-me"><span>${tr('Nombre de usuario', 'Username')}</span> <strong>${esc(st.username || '')}</strong></p>
+        <p class="comp-me"><span>${tr('Nombre de usuario (visible)', 'Username (visible)')}</span> <strong>${esc(st.username || '')}</strong></p>
         <p class="comp-me"><span>${tr('Correo', 'Email')}</span> <strong>${esc(comp.user.email || '')}</strong></p>
         <p class="hint">${tr('El nombre de usuario es definitivo: no se puede cambiar.', 'The username is final: it cannot be changed.')}</p>
         <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
         ${
           comp.confirmDelete
-            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre en la clasificación, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your name on the leaderboard, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
+            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
             : `<p><button class="link-btn" type="button" data-act="comp-delete-open">${tr('Borrar mi cuenta', 'Delete my account')}</button></p>`
         }
       </section>
@@ -1850,11 +1850,11 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly leaderboard needs an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
-        ${signup ? `<label class="field"><span>${tr('Nombre de usuario', 'Username')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="username" autocapitalize="none" spellcheck="false"><small class="field-hint">${tr('De 3 a 24 letras, números o «_ . -». Es el que se verá en las clasificaciones y no se podrá cambiar.', 'From 3 to 24 letters, numbers or ‘_ . -’. It is shown on the leaderboards and cannot be changed.')}</small></label>` : ''}
+        ${signup ? `<label class="field"><span>${tr('Nombre de usuario (visible)', 'Username (visible)')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="username" autocapitalize="none" spellcheck="false"><small class="field-hint">${tr('De 3 a 24 letras, números o «_ . -». Lo verá todo el mundo en las clasificaciones y no se podrá cambiar.', 'From 3 to 24 letters, numbers or ‘_ . -’. Everyone will see it on the leaderboards, and it cannot be changed.')}</small></label>` : ''}
         ${signup
           ? `<label class="field"><span>${tr('Correo', 'Email')}</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>`
           : `<label class="field"><span>${tr('Correo o nombre de usuario', 'Email or username')}</span><input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(comp.email || '')}"></label>`}

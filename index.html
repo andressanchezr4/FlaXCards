@@ -1204,7 +1204,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.22';
+  const VERSION = '5.23';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3731,7 +3731,7 @@ h1, h2, p { margin: 0; }
       <section class="panel" aria-labelledby="h-streaks">
         <h2 class="eyebrow" id="h-streaks">${tr('Las 50 rachas más largas', 'The 50 longest streaks')}</h2>
         ${body}
-        <p class="hint">${tr(`Cuentan las cuentas de FlaXCards: días seguidos con al menos ${STREAK_MIN} tarjetas respondidas, de cualquier idioma, que llegan al servidor ese mismo día (un día salvado con un protector de racha no suma, pero no corta la racha). Solo se ve el nombre de la clasificación.`, `FlaXCards accounts count: days in a row with at least ${STREAK_MIN} cards answered, in any language, that reach the server on the day (a day saved by a streak shield adds nothing, but does not break it). Only the leaderboard name is shown.`)}</p>
+        <p class="hint">${tr(`Cuentan las cuentas de FlaXCards: días seguidos con al menos ${STREAK_MIN} tarjetas respondidas, de cualquier idioma, que llegan al servidor ese mismo día (un día salvado con un protector de racha no suma, pero no corta la racha). Solo se ve el nombre de usuario. Los invitados no aparecen: para estar en la clasificación hace falta una cuenta.`, `FlaXCards accounts count: days in a row with at least ${STREAK_MIN} cards answered, in any language, that reach the server on the day (a day saved by a streak shield adds nothing, but does not break it). Only the username is shown. Guests do not appear: being on the ranking needs an account.`)}</p>
       </section>
     </main>`;
   }
@@ -4323,13 +4323,13 @@ h1, h2, p { margin: 0; }
       </section>
       <section class="panel" aria-labelledby="h-profile">
         <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
-        <p class="comp-me"><span>${tr('Nombre de usuario', 'Username')}</span> <strong>${esc(st.username || '')}</strong></p>
+        <p class="comp-me"><span>${tr('Nombre de usuario (visible)', 'Username (visible)')}</span> <strong>${esc(st.username || '')}</strong></p>
         <p class="comp-me"><span>${tr('Correo', 'Email')}</span> <strong>${esc(comp.user.email || '')}</strong></p>
         <p class="hint">${tr('El nombre de usuario es definitivo: no se puede cambiar.', 'The username is final: it cannot be changed.')}</p>
         <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
         ${
           comp.confirmDelete
-            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre en la clasificación, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your name on the leaderboard, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
+            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
             : `<p><button class="link-btn" type="button" data-act="comp-delete-open">${tr('Borrar mi cuenta', 'Delete my account')}</button></p>`
         }
       </section>
@@ -4341,11 +4341,11 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly leaderboard needs an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
-        ${signup ? `<label class="field"><span>${tr('Nombre de usuario', 'Username')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="username" autocapitalize="none" spellcheck="false"><small class="field-hint">${tr('De 3 a 24 letras, números o «_ . -». Es el que se verá en las clasificaciones y no se podrá cambiar.', 'From 3 to 24 letters, numbers or ‘_ . -’. It is shown on the leaderboards and cannot be changed.')}</small></label>` : ''}
+        ${signup ? `<label class="field"><span>${tr('Nombre de usuario (visible)', 'Username (visible)')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="username" autocapitalize="none" spellcheck="false"><small class="field-hint">${tr('De 3 a 24 letras, números o «_ . -». Lo verá todo el mundo en las clasificaciones y no se podrá cambiar.', 'From 3 to 24 letters, numbers or ‘_ . -’. Everyone will see it on the leaderboards, and it cannot be changed.')}</small></label>` : ''}
         ${signup
           ? `<label class="field"><span>${tr('Correo', 'Email')}</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>`
           : `<label class="field"><span>${tr('Correo o nombre de usuario', 'Email or username')}</span><input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(comp.email || '')}"></label>`}
@@ -4548,7 +4548,7 @@ h1, h2, p { margin: 0; }
       : `${compAuthForm()}
       <section class="panel">
         <button class="btn" type="button" data-act="guest">${tr('Seguir como invitado', 'Continue as a guest')}</button>
-        <p class="hint">${tr('Como invitado estudias igual, pero tu progreso se guarda solo en este navegador y no puedes jugar la competición semanal. Podrás crear la cuenta más adelante: lo que hayas estudiado pasará a ella.', 'As a guest you study just the same, but your progress is saved only in this browser and you cannot play the weekly competition. You can create an account later: what you have studied will move to it.')}</p>
+        <p class="hint">${tr('Como invitado estudias igual, pero tu progreso se guarda solo en este navegador y no puedes jugar la competición semanal ni aparecer en la clasificación de rachas. Podrás crear la cuenta más adelante: lo que hayas estudiado pasará a ella.', 'As a guest you study just the same, but your progress is saved only in this browser and you can neither play the weekly competition nor appear on the streaks ranking. You can create an account later: what you have studied will move to it.')}</p>
       </section>`;
     return `
     <main class="screen langs welcome">
