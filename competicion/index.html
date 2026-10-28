@@ -398,10 +398,11 @@ h1, h2, p { margin: 0; }
 .check-levels { margin-left: auto; font-size: 0.8125rem; color: var(--muted); white-space: nowrap; }
 
 /* ---------- direction of the cards ---------- */
-.dir { display: grid; gap: 6px; }
+.dir, .mode { display: grid; gap: 6px; }
 .dir-switch {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr); /* as many equal columns as options */
   gap: 4px;
   padding: 4px;
   background: var(--paper-2);
@@ -1179,6 +1180,7 @@ h1, h2, p { margin: 0; }
 .al-text.al-4, .ex-es .al-text.al-4 { color: var(--alt-4); }
 .al-text.al-5, .ex-es .al-text.al-5 { color: var(--alt-5); }
 .pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; }
+.pair-demo > span { display: block; }
 
 /* two languages per row; the app language (flags) and light/dark at the top left of the languages screen */
 .lang-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
