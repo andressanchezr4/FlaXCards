@@ -1098,6 +1098,10 @@ h1, h2, p { margin: 0; }
 .comp-wait { text-align: center; color: var(--muted); padding: 24px 0; }
 .comp-form { display: grid; gap: 10px; }
 .comp-form input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); font: inherit; }
+.field-hint { font-size: 0.8125rem; color: var(--muted); }
+.comp-me { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin: 0 0 6px; }
+.comp-me span { color: var(--muted); }
+.comp-me strong { overflow-wrap: anywhere; }
 .field > .pw { display: block; position: relative; font-weight: 400; }
 .pw input { padding-right: 48px; }
 .pw-eye { position: absolute; top: 0; right: 0; width: 44px; height: 100%; min-height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--muted); cursor: pointer; }
@@ -1200,7 +1204,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.21';
+  const VERSION = '5.22';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3824,12 +3828,14 @@ h1, h2, p { margin: 0; }
     not_authenticated: ['Inicia sesión para jugar.', 'Sign in to play.'],
     not_enough_questions: ['El servidor todavía no tiene preguntas suficientes.', 'The server does not have enough questions yet.'],
     invalid_answers: ['Las respuestas no son válidas.', 'The answers are not valid.'],
-    username_taken: ['Ese nombre ya lo usa otra persona.', 'Someone else is already using that name.'],
+    username_taken: ['Ese nombre de usuario ya lo usa otra persona: elige otro.', 'Someone else is already using that username: choose another.'],
+    username_final: ['El nombre de usuario no se puede cambiar.', 'The username cannot be changed.'],
+    too_many_attempts: ['Demasiadas contraseñas incorrectas con ese nombre. Espera 15 minutos o entra con tu correo.', 'Too many wrong passwords with that name. Wait 15 minutes or sign in with your email.'],
     password_mismatch: ['Las dos contraseñas no coinciden: escríbelas otra vez.', 'The two passwords do not match: type them again.'],
     invalid_username: ['El nombre debe tener de 3 a 24 letras, números o «_ . -».', 'The name must have 3 to 24 letters, numbers or ‘_ . -’.'],
     profile_missing: ['Tu cuenta no tiene perfil todavía. Vuelve a entrar.', 'Your account has no profile yet. Sign in again.'],
     load_failed: ['No se pudo cargar la conexión con el servidor de la competición.', 'Could not load the connection to the competition server.'],
-    'Invalid login credentials': ['Correo o contraseña incorrectos.', 'Wrong email or password.'],
+    'Invalid login credentials': ['Usuario, correo o contraseña incorrectos.', 'Wrong username, email or password.'],
     'Email not confirmed': ['Confirma primero tu correo (te hemos enviado un enlace).', 'Confirm your email first (we have sent you a link).'],
     'User already registered': ['Ya hay una cuenta con ese correo.', 'There is already an account with that email.'],
     // the server refuses a second account for the same mailbox (name+x@…, another case, Gmail dots)
@@ -4022,8 +4028,13 @@ h1, h2, p { margin: 0; }
     btn.innerHTML = show ? EYE.hide : EYE.show;
   }
 
+  // is the name free? null when the server cannot say (one without the check yet)
+  async function nameFree(c, username) {
+    const { data, error } = await c.rpc('username_available', { p_username: username });
+    return error ? null : data;
+  }
   async function compAuth(form) {
-    const email = form.email.value.trim();
+    let email = form.email.value.trim();
     const password = form.password.value;
     comp.email = email;
     comp.unconfirmed = '';
@@ -4032,7 +4043,10 @@ h1, h2, p { margin: 0; }
       const username = form.username.value.trim();
       if (!/^[A-Za-z0-9_.-]{3,24}$/.test(username)) throw new Error('invalid_username');
       if (form.password2.value !== password) throw new Error('password_mismatch');
+      if ((await nameFree(c, username)) === false) throw new Error('username_taken');
       const { data, error } = await c.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: compHere() } });
+      // the server refuses with the same words a taken mailbox and a name taken a moment ago: ask which
+      if (error && error.message === 'Database error saving new user' && (await nameFree(c, username)) === false) throw new Error('username_taken');
       if (error) throw new Error(error.message);
       if (!data.session) {
         // the account waits for the email: its link brings the player back here, already signed in
@@ -4042,6 +4056,13 @@ h1, h2, p { margin: 0; }
       }
       compSetUser(data.session.user);
     } else {
+      // with the username instead of the email: the server gives its email only for the right password
+      if (!email.includes('@')) {
+        const { data: found, error: wrong } = await c.rpc('login_email', { p_username: email, p_password: password });
+        if (wrong) throw new Error(wrong.message);
+        if (!found) throw new Error('Invalid login credentials');
+        email = found;
+      }
       const { data, error } = await c.auth.signInWithPassword({ email, password });
       if (error) {
         if (error.message === 'Email not confirmed') comp.unconfirmed = email;
@@ -4302,11 +4323,9 @@ h1, h2, p { margin: 0; }
       </section>
       <section class="panel" aria-labelledby="h-profile">
         <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
-        <form class="comp-form" data-form="comp-username">
-          <label class="field"><span>${tr('Nombre en la clasificación', 'Name on the leaderboard')}</span><input name="username" value="${esc(st.username || '')}" minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" required></label>
-          <button class="btn" type="submit" ${comp.busy ? 'disabled' : ''}>${tr('Guardar nombre', 'Save name')}</button>
-        </form>
-        <p class="hint">${esc(comp.user.email || '')}</p>
+        <p class="comp-me"><span>${tr('Nombre de usuario', 'Username')}</span> <strong>${esc(st.username || '')}</strong></p>
+        <p class="comp-me"><span>${tr('Correo', 'Email')}</span> <strong>${esc(comp.user.email || '')}</strong></p>
+        <p class="hint">${tr('El nombre de usuario es definitivo: no se puede cambiar.', 'The username is final: it cannot be changed.')}</p>
         <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
         ${
           comp.confirmDelete
@@ -4322,12 +4341,14 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (solo correo y contraseña).', 'The weekly leaderboard needs an account (just an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la clasificación semanal hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly leaderboard needs an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
-        ${signup ? `<label class="field"><span>${tr('Nombre en la clasificación', 'Name on the leaderboard')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="nickname"></label>` : ''}
-        <label class="field"><span>${tr('Correo', 'Email')}</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>
+        ${signup ? `<label class="field"><span>${tr('Nombre de usuario', 'Username')}</span><input name="username" required minlength="3" maxlength="24" pattern="[A-Za-z0-9_.\\-]{3,24}" autocomplete="username" autocapitalize="none" spellcheck="false"><small class="field-hint">${tr('De 3 a 24 letras, números o «_ . -». Es el que se verá en las clasificaciones y no se podrá cambiar.', 'From 3 to 24 letters, numbers or ‘_ . -’. It is shown on the leaderboards and cannot be changed.')}</small></label>` : ''}
+        ${signup
+          ? `<label class="field"><span>${tr('Correo', 'Email')}</span><input name="email" type="email" required autocomplete="email" value="${esc(comp.email || '')}"></label>`
+          : `<label class="field"><span>${tr('Correo o nombre de usuario', 'Email or username')}</span><input name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false" value="${esc(comp.email || '')}"></label>`}
         <label class="field"><span>${tr('Contraseña', 'Password')}</span>${passwordInput('password', signup ? 'new-password' : 'current-password')}</label>
         ${signup ? `<label class="field"><span>${tr('Repite la contraseña', 'Repeat the password')}</span>${passwordInput('password2', 'new-password')}</label>` : ''}
         <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${signup ? tr('Crear cuenta', 'Create account') : tr('Entrar', 'Sign in')}</button>
@@ -4486,13 +4507,6 @@ h1, h2, p { margin: 0; }
         if (comp.user && ui.screen === 'welcome') go('langs'); // from the first screen, on to the app
       });
     }
-    if (form.dataset.form === 'comp-username') {
-      compStep(async () => {
-        await rpc('quiz_set_username', { p_username: form.username.value.trim() });
-        await compLoad();
-        toast(tr('Nombre guardado.', 'Name saved.'));
-      });
-    }
   });
 
   // claude.ai does not let this page reach the competition server: there the button gives the link to the public copy
@@ -4526,7 +4540,7 @@ h1, h2, p { margin: 0; }
     const account = s
       ? `<section class="panel">
         <h2 class="eyebrow">${tr('Tu cuenta', 'Your account')}</h2>
-        <p>${tr('Has entrado como', 'You are signed in as')} <strong>${esc((s.user && s.user.email) || tr('tu cuenta', 'your account'))}</strong>.</p>
+        <p>${tr('Has entrado como', 'You are signed in as')} <strong>${esc(accountName() || (s.user && s.user.email) || tr('tu cuenta', 'your account'))}</strong>${accountName() && s.user && s.user.email ? ` (${esc(s.user.email)})` : ''}.</p>
         ${compError()}
         <button class="btn btn-primary" type="button" data-act="langs">${tr('Continuar', 'Continue')}</button>
         <button class="link-btn" type="button" data-act="welcome-signout" ${comp.busy ? 'disabled' : ''}>${tr('Cerrar sesión o usar otra cuenta', 'Sign out or use another account')}</button>
