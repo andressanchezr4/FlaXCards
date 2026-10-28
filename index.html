@@ -1200,7 +1200,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.20';
+  const VERSION = '5.21';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -1760,7 +1760,8 @@ h1, h2, p { margin: 0; }
   }
 
   // ---------------------------------------------------------------- streak and streak protectors
-  // a day counts for the streak if you answered at least STREAK_MIN cards or a protector covered it
+  // a day adds one to the streak if you answered at least STREAK_MIN cards; a day a protector covered adds
+  // nothing but does not break it (a day missed with no protector puts it back to 0)
   const studiedKey = (k, L) => (L.r || 0) >= (k < STREAK_MIN_FROM ? 1 : STREAK_MIN);
   const studiedDay = (n) => studiedKey(dayKey(n), logPeek(n));
   const activeDay = (n) => studiedDay(n) || !!logPeek(n).p;
@@ -1768,7 +1769,7 @@ h1, h2, p { margin: 0; }
     let n = activeDay(today) ? today : today - 1;
     let k = 0;
     while (activeDay(n)) {
-      k += 1;
+      if (studiedDay(n)) k += 1;
       n -= 1;
     }
     return k;
@@ -2961,13 +2962,13 @@ h1, h2, p { margin: 0; }
       .filter((k) => studiedKey(k, S.log[k]) || S.log[k].p)
       .map((k) => {
         const [y, m, d] = k.split('-').map(Number);
-        return dayNum(new Date(y, m - 1, d, 12).getTime());
+        return { n: dayNum(new Date(y, m - 1, d, 12).getTime()), add: studiedKey(k, S.log[k]) ? 1 : 0 };
       })
-      .sort((a, b) => a - b);
+      .sort((a, b) => a.n - b.n);
     let best = 0;
     let run = 0;
     for (let i = 0; i < days.length; i++) {
-      run = i && days[i] === days[i - 1] + 1 ? run + 1 : 1;
+      run = (i && days[i].n === days[i - 1].n + 1 ? run : 0) + days[i].add; // covered days keep it, not add
       best = Math.max(best, run);
     }
     return best;
@@ -3158,7 +3159,7 @@ h1, h2, p { margin: 0; }
       <span class="streak-flame">${ICON.flame}</span>
       <span class="streak-body">
         <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')} <span class="streak-best">${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span></span>
-        <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up and you keep your streak. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
+        <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector: ese día no suma, pero no pierdes la racha; sin protectores, vuelve a 0. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up: that day adds nothing, but you keep your streak; with no shields, it goes back to 0. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
         <button class="link-btn streak-board-btn" type="button" data-act="streak-board">${ICON.trophy}<span>${tr('Clasificación de rachas largas', 'Longest streaks ranking')}</span></button>
       </span>
@@ -3726,7 +3727,7 @@ h1, h2, p { margin: 0; }
       <section class="panel" aria-labelledby="h-streaks">
         <h2 class="eyebrow" id="h-streaks">${tr('Las 50 rachas más largas', 'The 50 longest streaks')}</h2>
         ${body}
-        <p class="hint">${tr(`Cuentan las cuentas de FlaXCards: días seguidos con al menos ${STREAK_MIN} tarjetas respondidas, de cualquier idioma, que llegan al servidor ese mismo día (o salvados con un protector de racha). Solo se ve el nombre de la clasificación.`, `FlaXCards accounts count: days in a row with at least ${STREAK_MIN} cards answered, in any language, that reach the server on the day (or saved by a streak shield). Only the leaderboard name is shown.`)}</p>
+        <p class="hint">${tr(`Cuentan las cuentas de FlaXCards: días seguidos con al menos ${STREAK_MIN} tarjetas respondidas, de cualquier idioma, que llegan al servidor ese mismo día (un día salvado con un protector de racha no suma, pero no corta la racha). Solo se ve el nombre de la clasificación.`, `FlaXCards accounts count: days in a row with at least ${STREAK_MIN} cards answered, in any language, that reach the server on the day (a day saved by a streak shield adds nothing, but does not break it). Only the leaderboard name is shown.`)}</p>
       </section>
     </main>`;
   }
