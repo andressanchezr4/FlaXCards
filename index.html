@@ -486,11 +486,13 @@ h1, h2, p { margin: 0; }
 .streak-body { display: grid; gap: 2px; min-width: 0; }
 .streak-num { font-size: 1.0625rem; color: var(--ink-2); }
 .streak-num b { font-size: 1.75rem; color: var(--ink); margin-right: 2px; }
+.streak-best { margin-left: 4px; font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
+.streak-best::before { content: '·'; margin-right: 8px; }
 .streak-today { font-weight: 700; color: var(--ink); }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
 .streak-meta svg { width: 14px; height: 14px; }
-.streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
+.streak-hero .streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
 .streak-board-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
@@ -1198,10 +1200,10 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.19';
+  const VERSION = '5.20';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
-  const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
+  const ROLLOVER = 0; // the study day changes at midnight
   const GAP = [5, 7]; // a word you are learning comes back after 5 to 7 other words
   // right answers in a row a failed word needs to count as known again (Ajustes › Estudio, 1–10, default 3)
   const neededRight = () => Math.min(10, Math.max(1, Math.round(Number(S.settings.neededRight) || 3)));
@@ -3155,10 +3157,10 @@ h1, h2, p { margin: 0; }
     return `<section class="streak-hero${met ? ' is-met' : ''}" aria-label="${tr(`Racha de ${streak} días; hoy ${met ? 'práctica completada' : `${doneToday} de ${goal} tarjetas`}`, `${streak}-day streak; today ${met ? 'practice done' : `${doneToday} of ${goal} cards`}`)}">
       <span class="streak-flame">${ICON.flame}</span>
       <span class="streak-body">
-        <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')}</span>
+        <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')} <span class="streak-best">${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span></span>
+        <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up and you keep your streak. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
         <button class="link-btn streak-board-btn" type="button" data-act="streak-board">${ICON.trophy}<span>${tr('Clasificación de rachas largas', 'Longest streaks ranking')}</span></button>
-        <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up and you keep your streak. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')} · ${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span>
       </span>
     </section>`;
   }

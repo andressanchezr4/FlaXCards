@@ -483,11 +483,13 @@ h1, h2, p { margin: 0; }
 .streak-body { display: grid; gap: 2px; min-width: 0; }
 .streak-num { font-size: 1.0625rem; color: var(--ink-2); }
 .streak-num b { font-size: 1.75rem; color: var(--ink); margin-right: 2px; }
+.streak-best { margin-left: 4px; font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
+.streak-best::before { content: '·'; margin-right: 8px; }
 .streak-today { font-weight: 700; color: var(--ink); }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
 .streak-meta svg { width: 14px; height: 14px; }
-.streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
+.streak-hero .streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
 .streak-board-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
