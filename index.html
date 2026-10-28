@@ -62,12 +62,15 @@
   --g-f: #e0479a;
   --g-n: #f2c200;
   --g-pl: #7b5cd6;
-  /* streak flame and the last-7-days boxes (dark blue = daily goal met) */
+  /* streak flame; dark blue: a step done (a new known word, a counted answer) */
   --flame: #ef5a1f;
   --met-bg: #1c5cab;
   --met-ink: #ffffff;
   --miss-bg: #dbe8f8;
   --miss-ink: #1d3557;
+  /* a day of the last week whose daily goal of words was met */
+  --goal-bg: #2b8a3e;
+  --goal-ink: #ffffff;
   /* whole card in the gender colour */
   --card-m: #dce8ff;
   --card-f: #ffdbeb;
@@ -133,6 +136,8 @@
     --met-ink: #0a1525;
     --miss-bg: #1f3048;
     --miss-ink: #c9dcf5;
+    --goal-bg: #69db7c;
+    --goal-ink: #0b2410;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.35);
   }
 }
@@ -185,6 +190,8 @@
   --met-ink: #0a1525;
   --miss-bg: #1f3048;
   --miss-ink: #c9dcf5;
+  --goal-bg: #69db7c;
+  --goal-ink: #0b2410;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
@@ -483,7 +490,8 @@ h1, h2, p { margin: 0; }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
 .streak-meta svg { width: 14px; height: 14px; }
-.streak-board-btn { justify-self: start; padding: 2px 0; font-size: 0.875rem; }
+.streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
+.streak-board-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
 /* language home: the known words take the place of the app name */
@@ -499,7 +507,7 @@ h1, h2, p { margin: 0; }
 .hero-label small { font-size: 0.875rem; font-weight: 400; color: var(--muted); }
 .shields { display: inline-flex; align-items: center; gap: 3px; margin-left: 12px; }
 .shield { width: 18px; height: 18px; fill: var(--accent); stroke: none; }
-.wc .shield { width: 17px; height: 17px; fill: currentColor; }
+.wc .shield { width: 13px; height: 13px; fill: currentColor; }
 .hint .shield { width: 15px; height: 15px; vertical-align: -2px; }
 .start-top .btn-primary { min-height: 60px; font-size: 1.125rem; }
 .practice {
@@ -542,10 +550,15 @@ h1, h2, p { margin: 0; }
 }
 .wc small { font-size: 0.6875rem; opacity: 0.85; }
 .wc b { font-size: 1rem; font-variant-numeric: tabular-nums; }
-.wc.is-met { background: var(--met-bg); color: var(--met-ink); }
+.wc.is-met { background: var(--goal-bg); color: var(--goal-ink); }
+.wc-mark { display: grid; place-items: center; height: 14px; }
+.wc-mark svg { width: 14px; height: 14px; }
+.wc .tick { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.pstrip-week { font-size: 0.8125rem; font-weight: 700; color: var(--ink-2); }
 .wc.is-today { box-shadow: inset 0 0 0 2px var(--ink-2); }
-.wc-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--miss-bg); margin-left: 6px; }
-.wc-key.is-met { background: var(--met-bg); margin-left: 0; }
+.wc-legend { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; white-space: nowrap; }
+.wc-key { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--miss-bg); }
+.wc-key.is-met { background: var(--goal-bg); }
 .pstrip-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; font-size: 0.9375rem; color: var(--ink-2); }
 .pstrip b { color: var(--ink); font-size: 1.125rem; }
 .goal-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
@@ -1185,7 +1198,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.18';
+  const VERSION = '5.19';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 4 * 3600000; // the study day changes at 4:00
@@ -1202,6 +1215,8 @@ h1, h2, p { margin: 0; }
   const BROWSE_LIMIT = 150;
   const MAX_SHIELDS = 5; // streak protectors you can keep at most
   const SHIELD_EVERY = 5; // studying this many days in a row earns one protector
+  const STREAK_MIN = 10; // cards answered in a day (all languages together) for the day to count in the streak
+  const STREAK_MIN_FROM = '2026-10-28'; // the days before it keep counting with a single card, as they did then
   // dir: which side you see first ('es' Spanish → German, 'de' German → Spanish, 'both');
   // order: new cards drawn at random ('random') or most frequent first ('frequency')
   // sessionSize: cards in each practice batch; shields: streak protectors (you start with 2)
@@ -1272,6 +1287,7 @@ h1, h2, p { margin: 0; }
     undo: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>',
     speaker: '<svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>',
     chevron: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>',
+    check: '<svg class="tick" viewBox="0 0 24 24" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7"/></svg>',
     flame: '<svg class="flame" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.9 3.4-1.4 5-1.4 7.4 0 1.3.9 2.4 2.2 2.4 1.5 0 2.3-1.3 2.1-2.9 2.5 1.8 3.9 4.5 3.9 7.1A6.8 6.8 0 0 1 5.2 16c0-3.5 2.2-6 4.1-7.9C10.7 6.6 11.6 4.4 12 2z"/></svg>',
     trophy: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 21h8M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
     shield: '<svg class="shield" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l7.5 3.2v5.4c0 4.8-3.2 8.8-7.5 10.4-4.3-1.6-7.5-5.6-7.5-10.4V5.7L12 2.5z"/></svg>',
@@ -1742,11 +1758,10 @@ h1, h2, p { margin: 0; }
   }
 
   // ---------------------------------------------------------------- streak and streak protectors
-  // a day counts for the streak if you studied or a protector covered it
-  const activeDay = (n) => {
-    const L = S.log[dayKey(n)];
-    return !!L && (L.r > 0 || !!L.p);
-  };
+  // a day counts for the streak if you answered at least STREAK_MIN cards or a protector covered it
+  const studiedKey = (k, L) => (L.r || 0) >= (k < STREAK_MIN_FROM ? 1 : STREAK_MIN);
+  const studiedDay = (n) => studiedKey(dayKey(n), logPeek(n));
+  const activeDay = (n) => studiedDay(n) || !!logPeek(n).p;
   function streakDays(today) {
     let n = activeDay(today) ? today : today - 1;
     let k = 0;
@@ -1760,7 +1775,7 @@ h1, h2, p { margin: 0; }
   function studiedRun(today) {
     let n = today;
     let k = 0;
-    while (logPeek(n).r) {
+    while (studiedDay(n)) {
       k += 1;
       n -= 1;
     }
@@ -1862,8 +1877,8 @@ h1, h2, p { margin: 0; }
       main.unshift(...picks);
     }
     if (random) shuffle(main); // a different order every time a session starts
-    // total: the cards of the batch, for its progress bar (a card leaves the batch once learned or reviewed)
-    sess = { scope, main, learning, total: main.length + learning.size, history: [], seen: 0, again: 0, current: null, revealed: false, flipped: false, newKnown: 0, reviewsOk: 0, flash: null };
+    // seen: cards answered in this batch (its progress bar; the batch ends when they reach its size)
+    sess = { scope, main, learning, history: [], seen: 0, again: 0, current: null, revealed: false, flipped: false, newKnown: 0, reviewsOk: 0, flash: null };
     sess.current = pickNext();
     go(sess.current ? 'study' : 'done');
   }
@@ -1885,10 +1900,11 @@ h1, h2, p { margin: 0; }
   }
 
   // the next card: a word you are learning once enough other words have passed (several at once: in random
-  // order in random mode, otherwise the one waiting longest), else the next word of the batch. If only words
-  // seen a moment ago are left, the batch ends and they open the next one — unless the batch is still short
-  // (practising only "Überprüfen", say): then the one seen longest ago comes back, never twice in a row.
+  // order in random mode, otherwise the one waiting longest), else the next word of the batch. The batch ends
+  // once you have answered as many cards as its size (the words still being learned open the next one); if
+  // before that only words seen a moment ago are left, the one seen longest ago comes back, never twice in a row.
   function pickNext() {
+    if (sess.seen >= batchSize()) return null;
     const ready = [...sess.learning].filter(isReady);
     if (ready.length) {
       if (S.settings.order === 'random') return ready[Math.floor(Math.random() * ready.length)];
@@ -1896,7 +1912,6 @@ h1, h2, p { margin: 0; }
     }
     let i = sess.main.findIndex(isReady);
     if (i < 0) {
-      if (sess.seen >= batchSize()) return null;
       const left = [...sess.learning, ...sess.main].filter((id) => wordOf(id) !== wordOf(sess.lastShown || ''));
       if (!left.length) return null;
       const id = left.reduce((a, b) => (readyOf(b) < readyOf(a) ? b : a));
@@ -1961,7 +1976,7 @@ h1, h2, p { margin: 0; }
     S.cards[id] = st;
     const L = logOf(today);
     L.r += 1;
-    if (L.r === 1) maybeEarnShield(today);
+    if (L.r === STREAK_MIN) maybeEarnShield(today); // today now counts for the streak
     if (!prev) L.n += 1;
     if (g === 1) L.a += 1;
     const fromMain = sess.main[0] === id;
@@ -2941,7 +2956,7 @@ h1, h2, p { margin: 0; }
   const periodRead = (p) => tr(`${p.label}: ${fmtInt(p.value)} ${p.value === 1 ? 'palabra' : 'palabras'} · objetivo ${fmtGoal(p.goal)} · ${diffText(p)}`, `${p.label}: ${fmtInt(p.value)} ${p.value === 1 ? 'word' : 'words'} · goal ${fmtGoal(p.goal)} · ${diffText(p)}`);
   function bestStreak() {
     const days = Object.keys(S.log)
-      .filter((k) => S.log[k].r || S.log[k].p)
+      .filter((k) => studiedKey(k, S.log[k]) || S.log[k].p)
       .map((k) => {
         const [y, m, d] = k.split('-').map(Number);
         return dayNum(new Date(y, m - 1, d, 12).getTime());
@@ -3063,8 +3078,8 @@ h1, h2, p { margin: 0; }
     }
     return { known, total };
   }
-  // top of the home screen: streak (flame), general progress of the selected levels and the last 7 days
-  // (dark blue = daily goal met, light blue = not met); tapping it opens the full progress in Ajustes
+  // top of the home screen: general progress of the selected levels and the words learned each of the last 7
+  // days in this language (green with a tick = daily goal met); tapping it opens the full progress in Ajustes
   function progressStrip(today) {
     const lvs = curLevels();
     const { known, total } = levelProgress(lvs, today);
@@ -3078,7 +3093,7 @@ h1, h2, p { margin: 0; }
         const met = p.value >= goal;
         const wd = tr('DLMXJVS', 'SMTWTFS')[dateOf(n).getDay()];
         const covered = !!logPeek(n).p;
-        return `<span class="wc${met ? ' is-met' : ''}${i === 6 ? ' is-today' : ''}" title="${esc(p.label)}: ${tr(`${p.value} de ${goal}${covered ? ' · salvado con un protector' : ''}`, `${p.value} of ${goal}${covered ? ' · saved by a shield' : ''}`)}"><small>${i === 6 ? tr('Hoy', 'Today') : wd}</small><b>${covered ? ICON.shield : fmtInt(p.value)}</b></span>`;
+        return `<span class="wc${met ? ' is-met' : ''}${i === 6 ? ' is-today' : ''}" title="${esc(p.label)}: ${tr(`${p.value} de ${goal} palabras aprendidas${met ? ' · objetivo cumplido' : ''}${covered ? ' · racha salvada con un protector' : ''}`, `${p.value} of ${goal} words learned${met ? ' · goal met' : ''}${covered ? ' · streak saved by a shield' : ''}`)}"><small>${i === 6 ? tr('Hoy', 'Today') : wd}</small><b>${fmtInt(p.value)}</b><i class="wc-mark">${met ? ICON.check : covered ? ICON.shield : ''}</i></span>`;
       })
       .join('');
     return `<button class="pstrip" type="button" data-act="progress" aria-label="${tr(`Ver tu progreso: ${pct} completado en ${levelsLabel(lvs)}`, `See your progress: ${pct} complete in ${levelsLabel(lvs)}`)}">
@@ -3086,8 +3101,9 @@ h1, h2, p { margin: 0; }
         <span class="pstrip-lv">${levelsLabel(lvs)} · <b>${pct}</b> ${tr('completado', 'complete')}</span>
       </span>
       <span class="goal-bar" role="img" aria-label="${tr(`${fmtInt(known)} de ${fmtInt(total)} conocidas`, `${fmtInt(known)} of ${fmtInt(total)} known`)}"><i style="width:${known ? Math.max(1.5, share * 100) : 0}%"></i></span>
+      <span class="pstrip-week">${tr('Palabras aprendidas cada día, última semana', 'Words learned each day, last week')}</span>
       <span class="week-cells" aria-label="${tr('Palabras aprendidas los últimos 7 días', 'Words learned in the last 7 days')}">${cells}</span>
-      <span class="pstrip-note"><i class="wc-key is-met"></i>${tr(`objetivo cumplido (${goal} al día)`, `goal met (${goal} a day)`)} <i class="wc-key"></i>${tr('sin cumplir', 'not met')}</span>
+      <span class="pstrip-note"><span class="wc-legend"><i class="wc-key is-met"></i>${tr(`objetivo diario cumplido (${goal} palabras)`, `daily goal met (${goal} words)`)}</span><span class="wc-legend"><i class="wc-key"></i>${tr('sin cumplir', 'not met')}</span></span>
     </button>`;
   }
   function selectPeriod(i) {
@@ -3127,42 +3143,46 @@ h1, h2, p { margin: 0; }
     </div>`;
   }
 
-  // the streak (all languages together), big on the languages screen: the flame is grey until today's practice
-  // is done (the daily goal, in cards answered) and red after it
+  // the streak (all languages together), big on the languages screen: the flame is grey until today counts for
+  // the streak (STREAK_MIN cards answered) and red after it
   function streakHero(today) {
     const streak = streakDays(today);
     const best = Math.max(streak, bestStreak());
-    const goal = S.settings.dailyGoal;
+    const goal = STREAK_MIN;
     const doneToday = logPeek(today).r || 0;
-    const met = doneToday >= goal;
+    const met = studiedDay(today);
     const shields = S.settings.shields;
     return `<section class="streak-hero${met ? ' is-met' : ''}" aria-label="${tr(`Racha de ${streak} días; hoy ${met ? 'práctica completada' : `${doneToday} de ${goal} tarjetas`}`, `${streak}-day streak; today ${met ? 'practice done' : `${doneToday} of ${goal} cards`}`)}">
       <span class="streak-flame">${ICON.flame}</span>
       <span class="streak-body">
         <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
-        <button class="link-btn streak-board-btn" type="button" data-act="streak-board">${tr('Ver las rachas más largas', 'See the longest streaks')} ›</button>
-        <span class="streak-meta" title="${tr(`Si un día no estudias, se gasta un protector y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `If you miss a day, a shield is used up and you keep your streak. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')} · ${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span>
+        <button class="link-btn streak-board-btn" type="button" data-act="streak-board">${ICON.trophy}<span>${tr('Clasificación de rachas largas', 'Longest streaks ranking')}</span></button>
+        <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector y no pierdes la racha. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up and you keep your streak. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')} · ${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span>
       </span>
     </section>`;
   }
 
-  // start screen: the app name, the streak and one flag per language
+  // start screen: the app name, the streak and one flag per language, the one with most known words first
+  // (languages tied keep the usual order)
   function viewLangs() {
     const today = dayNum();
     const shown = curLang();
-    const tiles = LANGS.map((l) => {
+    const tiles = LANGS.map((l, i) => {
       useLang(l.id); // each language with its own decks and levels: the same numbers as inside
       const known = levelProgress(curLevels()).known;
       const cards = DECKS.reduce((n, d) => n + d.cards.length, 0);
-      return `<button class="lang-tile" type="button" data-act="lang" data-lang="${l.id}" aria-label="${tr(`Practicar ${l.es}`, `Practise ${l.enName}`)}">
+      return { i, known, html: `<button class="lang-tile" type="button" data-act="lang" data-lang="${l.id}" aria-label="${tr(`Practicar ${l.es}`, `Practise ${l.enName}`)}">
         ${FLAGS[l.id]}
         <span class="lang-name" lang="${l.id}">${l.name}</span>
         <span class="lang-sub">${tr(l.es, l.enName)}</span>
         <span class="lang-stats">${fmtInt(cards)} ${tr('tarjetas', 'cards')}</span>
         <span class="lang-stats">${fmtInt(known)} ${known === 1 ? tr('palabra conocida', 'known word') : tr('palabras conocidas', 'known words')} ${tr('en', 'in')} ${levelsLabel(curLevels())}</span>
-      </button>`;
-    }).join('');
+      </button>` };
+    })
+      .sort((a, b) => b.known - a.known || a.i - b.i)
+      .map((t) => t.html)
+      .join('');
     useLang(shown);
     return `
     <main class="screen langs has-top">
@@ -3407,7 +3427,7 @@ h1, h2, p { margin: 0; }
         <button class="icon-btn flag-btn${myNote ? ' is-on' : ''}" type="button" data-act="flag-open" aria-label="${tr('Marcar esta tarjeta como problemática', 'Flag this card as a problem')}" title="${tr('Marcar como problemática', 'Flag as a problem')}">!</button>
         <button class="prev-btn" type="button" data-act="undo" aria-label="${tr('Volver a la tarjeta anterior', 'Back to the previous card')}" ${sess.history.length ? '' : 'disabled'}>${ICON.back}<span>${tr('Anterior', 'Previous')}</span></button>
       </header>
-      ${progressBar(sess.total - (k.n + k.l + k.r), sess.total, tr('tarjetas de esta tanda terminadas', 'cards of this batch done'))}
+      ${progressBar(sess.seen, Math.min(batchSize(), sess.seen + k.n + k.l + k.r), tr('tarjetas de esta tanda vistas', 'cards of this batch seen'))}
       ${flash ? `<p class="flash ${flash.cls}" role="status">${flash.text}</p>` : ''}
       <div class="card-wrap">
         <article class="kcard${back ? ' is-back' : ''}${enter ? ' is-enter' : ''}${turn ? ' is-turn' : ''}${gender}" data-act="flip">
@@ -3697,14 +3717,14 @@ h1, h2, p { margin: 0; }
     return `
     <header class="topbar">
       <button class="icon-btn" type="button" data-act="langs" aria-label="${tr('Volver a los idiomas', 'Back to languages')}">${ICON.back}</button>
-      <span class="topbar-title">${tr('Rachas más largas', 'Longest streaks')}</span>
+      <span class="topbar-title">${tr('Clasificación de rachas largas', 'Longest streaks ranking')}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
       <section class="panel" aria-labelledby="h-streaks">
         <h2 class="eyebrow" id="h-streaks">${tr('Las 50 rachas más largas', 'The 50 longest streaks')}</h2>
         ${body}
-        <p class="hint">${tr('Cuentan las cuentas de FlaXCards: días seguidos estudiando, de cualquier idioma, que llegan al servidor ese mismo día (o salvados con un protector de racha). Solo se ve el nombre de la clasificación.', 'FlaXCards accounts count: days in a row studying any language that reach the server on the day (or saved by a streak shield). Only the leaderboard name is shown.')}</p>
+        <p class="hint">${tr(`Cuentan las cuentas de FlaXCards: días seguidos con al menos ${STREAK_MIN} tarjetas respondidas, de cualquier idioma, que llegan al servidor ese mismo día (o salvados con un protector de racha). Solo se ve el nombre de la clasificación.`, `FlaXCards accounts count: days in a row with at least ${STREAK_MIN} cards answered, in any language, that reach the server on the day (or saved by a streak shield). Only the leaderboard name is shown.`)}</p>
       </section>
     </main>`;
   }

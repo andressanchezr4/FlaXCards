@@ -59,12 +59,15 @@
   --g-f: #e0479a;
   --g-n: #f2c200;
   --g-pl: #7b5cd6;
-  /* streak flame and the last-7-days boxes (dark blue = daily goal met) */
+  /* streak flame; dark blue: a step done (a new known word, a counted answer) */
   --flame: #ef5a1f;
   --met-bg: #1c5cab;
   --met-ink: #ffffff;
   --miss-bg: #dbe8f8;
   --miss-ink: #1d3557;
+  /* a day of the last week whose daily goal of words was met */
+  --goal-bg: #2b8a3e;
+  --goal-ink: #ffffff;
   /* whole card in the gender colour */
   --card-m: #dce8ff;
   --card-f: #ffdbeb;
@@ -130,6 +133,8 @@
     --met-ink: #0a1525;
     --miss-bg: #1f3048;
     --miss-ink: #c9dcf5;
+    --goal-bg: #69db7c;
+    --goal-ink: #0b2410;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.35);
   }
 }
@@ -182,6 +187,8 @@
   --met-ink: #0a1525;
   --miss-bg: #1f3048;
   --miss-ink: #c9dcf5;
+  --goal-bg: #69db7c;
+  --goal-ink: #0b2410;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
@@ -480,7 +487,8 @@ h1, h2, p { margin: 0; }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
 .streak-meta svg { width: 14px; height: 14px; }
-.streak-board-btn { justify-self: start; padding: 2px 0; font-size: 0.875rem; }
+.streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
+.streak-board-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
 /* language home: the known words take the place of the app name */
@@ -496,7 +504,7 @@ h1, h2, p { margin: 0; }
 .hero-label small { font-size: 0.875rem; font-weight: 400; color: var(--muted); }
 .shields { display: inline-flex; align-items: center; gap: 3px; margin-left: 12px; }
 .shield { width: 18px; height: 18px; fill: var(--accent); stroke: none; }
-.wc .shield { width: 17px; height: 17px; fill: currentColor; }
+.wc .shield { width: 13px; height: 13px; fill: currentColor; }
 .hint .shield { width: 15px; height: 15px; vertical-align: -2px; }
 .start-top .btn-primary { min-height: 60px; font-size: 1.125rem; }
 .practice {
@@ -539,10 +547,15 @@ h1, h2, p { margin: 0; }
 }
 .wc small { font-size: 0.6875rem; opacity: 0.85; }
 .wc b { font-size: 1rem; font-variant-numeric: tabular-nums; }
-.wc.is-met { background: var(--met-bg); color: var(--met-ink); }
+.wc.is-met { background: var(--goal-bg); color: var(--goal-ink); }
+.wc-mark { display: grid; place-items: center; height: 14px; }
+.wc-mark svg { width: 14px; height: 14px; }
+.wc .tick { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.pstrip-week { font-size: 0.8125rem; font-weight: 700; color: var(--ink-2); }
 .wc.is-today { box-shadow: inset 0 0 0 2px var(--ink-2); }
-.wc-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: var(--miss-bg); margin-left: 6px; }
-.wc-key.is-met { background: var(--met-bg); margin-left: 0; }
+.wc-legend { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; white-space: nowrap; }
+.wc-key { display: inline-block; flex: none; width: 12px; height: 12px; border-radius: 3px; background: var(--miss-bg); }
+.wc-key.is-met { background: var(--goal-bg); }
 .pstrip-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; font-size: 0.9375rem; color: var(--ink-2); }
 .pstrip b { color: var(--ink); font-size: 1.125rem; }
 .goal-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
