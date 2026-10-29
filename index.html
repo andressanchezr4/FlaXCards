@@ -1149,6 +1149,57 @@ h1, h2, p { margin: 0; }
 .quiz-write input { min-height: 56px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font: 700 1.25rem var(--font-body); text-align: center; }
 .quiz-write input:focus { border-color: var(--accent); outline: none; }
 .quiz-hint { text-align: center; }
+.quiz-write input.is-right, .quiz-opt.is-chosen.is-right { border-color: #2f9e44; background: rgba(47, 158, 68, 0.12); }
+.quiz-write input.is-wrong, .quiz-opt.is-chosen.is-wrong { border-color: #e03131; background: rgba(224, 49, 49, 0.12); }
+/* the answer of a competition question: the screen goes green, or red while the question shakes; from the edges to
+   solid, then it fades as the next question comes */
+.quiz-flash { --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
+.quiz-flash.is-wrong { --flash: #e03131; animation-duration: 1.04s; }
+.quiz-flash::before, .quiz-flash::after { content: ''; position: absolute; inset: 0; }
+.quiz-flash::before { background: radial-gradient(circle at 50% 45%, transparent 0, var(--flash) 78%); }
+.quiz-flash::after { background: var(--flash); opacity: 0; animation: quiz-flash-solid 0.9s ease-out forwards; }
+.quiz-flash.is-wrong::after { animation-duration: 1.04s; }
+@keyframes quiz-flash { 0% { opacity: 0; } 20% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes quiz-flash-solid { 0%, 15% { opacity: 0; } 42%, 100% { opacity: 1; } }
+.quiz-flash-mark {
+  position: absolute;
+  z-index: 1; /* over the solid colour */
+  left: 50%;
+  top: 45%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--flash);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  animation: quiz-mark-pop 0.9s ease-out forwards;
+}
+.quiz-flash.is-wrong .quiz-flash-mark { animation-duration: 1.04s; }
+.quiz-flash-icon { display: grid; }
+.quiz-flash-icon svg { width: 72px; height: 72px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.quiz-flash.is-wrong .quiz-flash-icon { animation: quiz-shake 0.45s ease-in-out 0.12s; }
+@keyframes quiz-mark-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  22% { transform: scale(1.1); opacity: 1; }
+  34% { transform: scale(1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.quiz-body.is-shaking { animation: quiz-shake 0.45s ease-in-out; }
+@keyframes quiz-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-12px); }
+  30% { transform: translateX(10px); }
+  45% { transform: translateX(-8px); }
+  60% { transform: translateX(6px); }
+  75% { transform: translateX(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quiz-flash { opacity: 0.5; } /* no movement: a still colour for a moment */
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .quiz-nav { display: flex; justify-content: space-between; }
 .review { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .review li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 1.5rem; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--paper-2); }
@@ -1224,7 +1275,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.28';
+  const VERSION = '5.29';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3851,7 +3902,7 @@ h1, h2, p { margin: 0; }
     </header>
     <main class="screen">
       <div class="dir-switch board-tabs" role="group" aria-label="${tr('Clasificación', 'Ranking')}">
-        ${[['streaks', tr('Rachas largas', 'Longest streaks')], ['accuracy', tr('% de aciertos', '% right')]]
+        ${[['streaks', tr('Rachas largas', 'Longest streaks')], ['accuracy', tr('Palabras aprendidas', 'Words learned')]]
           .map(([v, l]) => `<button type="button" class="dir-opt${tab === v ? ' is-on' : ''}" data-act="board-tab" data-tab="${v}" aria-pressed="${tab === v}">${l}</button>`)
           .join('')}
       </div>
@@ -3935,6 +3986,7 @@ h1, h2, p { margin: 0; }
     weeks: null,
     game: null, // the game being played (questions without the right answers)
     answers: {}, // question id → what was written (or the option id chosen)
+    checked: {}, // question id → right (true) or wrong (false), once the server has checked it (it is final)
     index: 0,
     result: null,
     busy: false,
@@ -4289,7 +4341,14 @@ h1, h2, p { margin: 0; }
     } catch (e) {
       comp.answers = {};
     }
-    const firstOpen = game.questions.findIndex((q) => !comp.answers[q.question_id]);
+    // the answers already checked (a resumed game): what they were, and right or wrong
+    comp.checked = {};
+    for (const q of game.questions) {
+      if (!q.answered) continue;
+      comp.checked[q.question_id] = !!q.right;
+      comp.answers[q.question_id] = game.typed ? q.typed_text || '' : q.selected_option_id;
+    }
+    const firstOpen = game.questions.findIndex((q) => !(q.question_id in comp.checked) && !comp.answers[q.question_id]);
     comp.index = firstOpen < 0 ? game.questions.length - 1 : firstOpen;
     go('quiz');
     focusAnswer();
@@ -4332,20 +4391,65 @@ h1, h2, p { margin: 0; }
     }
     if (left <= 5 && !comp.busy) compFinish();
   }
-  function compChoose(optionId) {
-    const q = comp.game.questions[comp.index];
-    comp.answers[q.question_id] = Number(optionId);
-    saveAnswers();
+  // on to the next question, or the end
+  function quizNext() {
     if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1);
     else compFinish();
   }
-  // a written answer, sent with "Siguiente" (or Enter): on to the next question, or the end
+  function compChoose(optionId) {
+    const q = comp.game.questions[comp.index];
+    if (q.question_id in comp.checked) return quizNext(); // answered already: it is final
+    comp.answers[q.question_id] = Number(optionId);
+    saveAnswers();
+    checkAnswer(q, { p_option: Number(optionId) });
+  }
+  // a written answer, sent with "Siguiente" (or Enter); nothing written is like "Saltar"
   function compWrite(text) {
     const q = comp.game.questions[comp.index];
-    comp.answers[q.question_id] = String(text || '').trim().slice(0, 100);
+    if (q.question_id in comp.checked) return quizNext();
+    const value = String(text || '').trim().slice(0, 100);
+    comp.answers[q.question_id] = value;
     saveAnswers();
-    if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1);
-    else compFinish();
+    if (value) checkAnswer(q, { p_text: value });
+    else quizNext();
+  }
+  // the server checks the answer at once (and keeps it as final): green or red, then the next question. Without an
+  // answer from it (no connection, an older server) the game goes on and the answer is sent at the end, as before
+  async function checkAnswer(q, args) {
+    const game = comp.game;
+    comp.busy = true;
+    // while the server checks it the screen stays as it is (redrawing it would close the phone's keyboard)
+    const input = document.getElementById('quiz-answer');
+    if (input) input.readOnly = true;
+    app.querySelectorAll('.quiz-opt').forEach((b) => {
+      b.disabled = true;
+      b.classList.toggle('is-chosen', Number(b.dataset.id) === Number(args.p_option));
+    });
+    let right = null;
+    try {
+      const r = await rpc('quiz_answer', { p_session: game.session_id, p_question: q.question_id, p_text: null, p_option: null, ...args });
+      right = !!(r && r.is_correct);
+    } catch (e) {
+      /* sent with the rest at the end */
+    }
+    comp.busy = false;
+    if (comp.game !== game) return;
+    if (right === null) return quizNext();
+    comp.checked[q.question_id] = right;
+    flashAnswer(right, quizNext);
+  }
+  // the whole screen goes green (right), or red while the question shakes (wrong): from the edges to solid, with a
+  // tick or a cross in the middle, and the next question appears as the colour fades
+  function flashAnswer(right, then) {
+    const body = app.querySelector('.quiz-body');
+    if (!right && body) body.classList.add('is-shaking');
+    const flash = document.createElement('div');
+    flash.className = `quiz-flash ${right ? 'is-right' : 'is-wrong'}`;
+    // and in the middle a green tick or a red cross, in a white disc (it shakes too when wrong)
+    flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span><span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : tr('Incorrecto', 'Wrong')}</span>`;
+    document.body.appendChild(flash);
+    setTimeout(then, right ? 380 : 520);
+    setTimeout(() => flash.remove(), right ? 900 : 1040);
   }
   async function compFinish() {
     const game = comp.game;
@@ -4545,15 +4649,17 @@ h1, h2, p { margin: 0; }
     const language = compValidLanguage(g.language) ? g.language : comp.language;
     const last = comp.index === g.questions.length - 1;
     const hint = COMP_LANGUAGES[language].hint;
+    const done = q.question_id in comp.checked; // answered already: fixed, green or red
+    const mark = done ? (comp.checked[q.question_id] ? ' is-right' : ' is-wrong') : '';
     // written: a box and "Siguiente" (Enter sends it too); Chinese: the four options
     const answerBlock = g.typed
       ? `<form class="quiz-write" data-form="comp-write">
-          <input id="quiz-answer" name="answer" lang="${language}" value="${esc(chosen || '')}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="${last ? 'done' : 'next'}" aria-label="${tr('Tu respuesta', 'Your answer')}" placeholder="${tr('Escribe la palabra', 'Write the word')}" ${comp.busy ? 'disabled' : ''}>
+          <input id="quiz-answer" class="${mark.trim()}" name="answer" lang="${language}" value="${esc(chosen || '')}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="${last ? 'done' : 'next'}" aria-label="${tr('Tu respuesta', 'Your answer')}" placeholder="${tr('Escribe la palabra', 'Write the word')}" ${comp.busy ? 'disabled' : done ? 'readonly' : ''}>
           <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${last ? tr('Terminar', 'Finish') : tr('Siguiente', 'Next')}</button>
         </form>
         ${hint ? `<p class="hint quiz-hint">${tr(...hint)}</p>` : ''}`
       : `<div class="quiz-options">
-          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="${language}" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
+          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ` is-chosen${mark}` : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="${language}" ${comp.busy || done ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
         </div>`;
     return `<div class="quiz">
       <header class="study-bar">
@@ -4569,7 +4675,7 @@ h1, h2, p { margin: 0; }
         ${answerBlock}
         <div class="quiz-nav">
           <button class="link-btn" type="button" data-act="comp-prev" ${comp.index === 0 ? 'disabled' : ''}>‹ ${tr('Anterior', 'Previous')}</button>
-          ${g.typed && last ? '<span></span>' : `<button class="link-btn" type="button" data-act="comp-skip">${last ? tr('Terminar', 'Finish') : tr('Saltar ›', 'Skip ›')}</button>`}
+          ${g.typed && last ? '<span></span>' : `<button class="link-btn" type="button" data-act="comp-skip">${last ? tr('Terminar', 'Finish') : done ? tr('Siguiente ›', 'Next ›') : tr('Saltar ›', 'Skip ›')}</button>`}
         </div>
       </main>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
