@@ -1206,7 +1206,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.24';
+  const VERSION = '5.25';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -1217,7 +1217,7 @@ h1, h2, p { margin: 0; }
   // a wrong one sends it back to the start; a word right in the last box stays there.
   const BOXES = [1, 3, 7, 14, 30, 90];
   const FIRST_BOX = 3; // a new word right the first time was known already: back in BOXES[2] = 7 days
-  const MIX = { new: 0.4, balanced: 0.5, review: 1 }; // share of a batch the words already seen may take
+  const MIX = { new: 0.1, balanced: 0.5, review: 1 }; // share of a batch the words already seen may take
   const SYNC_DELAY = 4000;
   const NO_FRONT_AUDIO = new Set(['meine-fehler']); // that front is deliberately wrong German
   const LEVEL_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -2169,7 +2169,7 @@ h1, h2, p { margin: 0; }
       if (!this.ok) return;
       const load = () => {
         this.all = speechSynthesis.getVoices();
-        if (ui.screen === 'settings') render();
+        if (ui.screen === 'langsettings') render();
       };
       load();
       try {
@@ -2924,19 +2924,11 @@ h1, h2, p { margin: 0; }
   // the two modes of the practice of the levels: study and review (see planBatch)
   function modeSwitch() {
     const review = reviewMode();
-    const names = `«<span lang="${curLang()}">${esc(LANG().review)}</span>» ${tr('y', 'and')} «<span lang="${curLang()}">${esc(LANG().hard)}</span>»`;
-    const n = review ? reviewPicks(true).length : 0;
-    const hint = !review
-      ? tr(`Palabras nuevas y repasos; un 10 % de la tanda son palabras de ${names}.`, `New words and reviews; 10 % of the round are words from ${names}.`)
-      : n
-        ? tr(`Solo palabras de ${names}: ${fmtInt(n)} ${n === 1 ? 'pendiente' : 'pendientes'}.`, `Only words from ${names}: ${fmtInt(n)} to go.`)
-        : tr(`${names} no tienen palabras pendientes: la tanda es normal.`, `${names} have no words to go: the round is a normal one.`);
     return `<div class="mode">
       <div class="dir-switch" role="group" aria-label="${tr('Modo de práctica', 'Practice mode')}">
         <button type="button" class="dir-opt${review ? '' : ' is-on'}" data-act="mode" data-mode="study" aria-pressed="${!review}">${tr('Estudio', 'Study')}</button>
         <button type="button" class="dir-opt${review ? ' is-on' : ''}" data-act="mode" data-mode="review" aria-pressed="${review}">${tr('Repaso', 'Review')}</button>
       </div>
-      <p class="dir-hint">${hint}</p>
     </div>`;
   }
   function startButton(scope, p) {
@@ -3072,14 +3064,6 @@ h1, h2, p { margin: 0; }
         <div class="goal">
           <div class="goal-head"><strong>${tr(`Esta semana: ${fmtInt(week.value)} de ${fmtInt(week.goal)} palabras`, `This week: ${fmtInt(week.value)} of ${fmtInt(week.goal)} words`)}</strong><span>${diffText(week)}</span></div>
           <span class="goal-bar" role="img" aria-label="${tr(`${fmtInt(week.value)} de ${fmtInt(week.goal)}`, `${fmtInt(week.value)} of ${fmtInt(week.goal)}`)}"><i style="width:${Math.min(100, (100 * week.value) / Math.max(1, week.goal))}%"></i></span>
-        </div>
-        <div class="set-row">
-          <span><strong>${tr('Objetivo diario', 'Daily goal')}</strong><small>${tr(`Palabras que quieres aprender cada día (a la semana: ${S.settings.dailyGoal * 7}).`, `Words you want to learn each day (per week: ${S.settings.dailyGoal * 7}).`)}</small></span>
-          <span class="stepper">
-            <button class="icon-btn sm" type="button" data-act="goal" data-delta="-1" aria-label="${tr('Una menos', 'One fewer')}">−</button>
-            <output>${S.settings.dailyGoal}</output>
-            <button class="icon-btn sm" type="button" data-act="goal" data-delta="1" aria-label="${tr('Una más', 'One more')}">+</button>
-          </span>
         </div>
         <div class="pg-tabs" role="group" aria-label="${tr('Ver por', 'View by')}">
           ${[['day', tr('Día', 'Day')], ['week', tr('Semana', 'Week')], ['month', tr('Mes', 'Month')]].map(([v, l]) => `<button type="button" class="dir-opt${v === view ? ' is-on' : ''}" data-act="pg-view" data-view="${v}" aria-pressed="${v === view}">${l}</button>`).join('')}
@@ -3280,11 +3264,12 @@ h1, h2, p { margin: 0; }
       ${knownHero(lvs, today)}
       <span class="topbar-actions">
         <button class="icon-btn" type="button" data-act="progress" aria-label="${tr('Tu progreso', 'Your progress')}">${ICON.trend}</button>
+        <button class="icon-btn" type="button" data-act="lang-settings" aria-label="${tr(`Ajustes de ${LANG().es.toLowerCase()}`, `${LANG().enName} settings`)}">${ICON.gear}</button>
       </span>
     </header>
     <main class="screen">
       <div class="start-top">
-        ${decks.some(isActive) || fehlerOn() || hardOn() ? modeSwitch() + startButton(level, p) : `<p class="all-done">${tr('No hay ningún mazo marcado para estos niveles.', 'No decks are ticked for these levels.')}</p><button class="btn" type="button" data-act="settings" data-focus="sec-decks">${tr('Elegir mazos en Ajustes', 'Choose decks in Settings')}</button>`}
+        ${decks.some(isActive) || fehlerOn() || hardOn() ? modeSwitch() + startButton(level, p) : `<p class="all-done">${tr('No hay ningún mazo marcado para estos niveles.', 'No decks are ticked for these levels.')}</p><button class="btn" type="button" data-act="lang-settings" data-focus="sec-decks">${tr('Elegir mazos en Ajustes', 'Choose decks in Settings')}</button>`}
       </div>
       ${compValidLanguage(curLang()) ? `<button class="btn comp-entry" type="button" data-lang="${curLang()}" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('10 preguntas · se juega en tu página de FlaXCards', '10 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('10 preguntas · clasificación de la semana', '10 questions · weekly leaderboard')}</small></span></button>` : ''}
       ${firstUse ? `<p class="intro">${tr('Marca abajo los niveles, elige los mazos en Ajustes y pulsa «Empezar». Desliza la tarjeta a la derecha si te la sabes, a la izquierda si no, y hacia arriba para repasarla en breve.', 'Tick the levels below, choose the decks in Settings and tap ‘Start’. Swipe the card right if you know it, left if you don’t, and up to see it again shortly.')}</p>` : ''}
@@ -3656,34 +3641,17 @@ h1, h2, p { margin: 0; }
 
   function viewSettings() {
     const st = S.settings;
-    const voices = Speech.voices;
-    const voiceBlock = Speech.ok
-      ? `<label class="switch-row"><span><strong>${tr(`Leer la palabra en ${LANG().es.toLowerCase()}`, `Read the ${LANG().enName} word aloud`)}</strong><small>${tr(`Se oye una vez, en cuanto aparece en la tarjeta. Para oírla otra vez, pulsa el altavoz.`, `It is heard once, as soon as it appears on the card. To hear it again, tap the speaker.`)}</small></span><input type="checkbox" data-act="auto-speak" ${st.autoSpeak ? 'checked' : ''}></label>
-        <label class="field"><span>${tr('Velocidad', 'Speed')} <output id="rate-out">${Math.round(st.rate * 100)} %</output></span><input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="${st.rate}"></label>
-        <label class="field"><span>${tr(`Voz ${LANG().adj}`, `${LANG().enName} voice`)}</span><select id="voice">
-          <option value="">${tr('Automática', 'Automatic')}</option>
-          ${voices.map((v) => `<option value="${esc(v.voiceURI)}"${v.voiceURI === savedVoice() ? ' selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}
-        </select></label>
-        ${voices.length ? '' : `<p class="hint">${tr(`No aparece ninguna voz ${LANG().adj}. En Android: Ajustes › Sistema › Idiomas › Salida de texto a voz, y descarga los datos de voz en ${LANG().es.toLowerCase()}.`, `No ${LANG().enName} voice is available. On Android: Settings › System › Languages › Text-to-speech output, and download the ${LANG().enName} voice data.`)}</p>`}
-        <button class="btn" type="button" data-act="test-voice">${tr('Probar la voz', 'Test the voice')}</button>`
-      : `<p class="hint">${tr('Este navegador no puede leer texto en voz alta.', 'This browser cannot read text aloud.')}</p>`;
     return `
     <header class="topbar">
-      ${ui.settingsFrom === 'langs' ? `<button class="icon-btn" type="button" data-act="langs" aria-label="${tr('Volver a los idiomas', 'Back to languages')}">${ICON.back}</button>` : `<button class="icon-btn" type="button" data-act="home" aria-label="${tr('Volver al inicio', 'Back to home')}">${ICON.back}</button>`}
+      <button class="icon-btn" type="button" data-act="langs" aria-label="${tr('Volver a los idiomas', 'Back to languages')}">${ICON.back}</button>
       <span class="topbar-title">${tr('Ajustes', 'Settings')}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
-      <section class="panel" aria-labelledby="h-set-lang">
-        <h2 class="eyebrow" id="h-set-lang">${tr('Idioma', 'Language')}</h2>
-        <label class="field"><span>${tr('Los mazos, el sentido de las tarjetas y la voz que ves abajo son de', 'The decks, card direction and voice below are those of')}</span><select id="set-lang">
-          ${LANGS.map((l) => `<option value="${l.id}"${l.id === curLang() ? ' selected' : ''}>${esc(l.name)} · ${tr(l.es, l.enName)}</option>`).join('')}
-        </select></label>
-      </section>
       <section class="panel" id="sec-study" aria-labelledby="h-study">
         <h2 class="eyebrow" id="h-study">${tr('Estudio', 'Study')}</h2>
         <div class="set-row">
-          <span><strong>${tr('Tarjetas por tanda', 'Cards per round')}</strong><small>${tr('Cada vez que pulsas «Empezar»: palabras nuevas y palabras ya vistas (repasos y falladas), según la mezcla que elijas abajo. La tanda termina cuando has visto ese número de tarjetas; si la dejas a medias, lo que has respondido queda guardado.', 'Each time you tap ‘Start’: new words and words already seen (reviews and missed ones), in the mix you choose below. The round ends when you have seen that many cards; if you stop halfway, what you answered is saved.')}</small></span>
+          <span><strong>${tr('Tarjetas por tanda', 'Cards per round')}</strong></span>
           <span class="stepper">
             <button class="icon-btn sm" type="button" data-act="npd" data-delta="-5" aria-label="${tr('Cinco menos', 'Five fewer')}">−</button>
             <output id="npd">${st.sessionSize}</output>
@@ -3691,16 +3659,23 @@ h1, h2, p { margin: 0; }
           </span>
         </div>
         <div class="set-row">
-          <span><strong>${tr('Aciertos para aprender una palabra fallada', 'Right answers to learn a failed word')}</strong><small>${tr('Una palabra nueva que aciertas a la primera ya cuenta como conocida y vuelve a repasarse en una semana. Si la fallas o la mandas a «Repasar», necesita este número de aciertos seguidos para contar como aprendida: vuelve una vez más en la misma tanda y los demás intentos llegan los días siguientes. Para insistir en ellas tienes «Überprüfen» y «Schwierige Wörter».', 'A new word you get right the first time counts as known straight away and comes back for review in a week. If you fail it or send it to ‘Later’, it needs this many right answers in a row to count as learned: it comes back once more in the same round and the other tries come on the following days. To drill them you have ‘Überprüfen’ and ‘Schwierige Wörter’.')}</small></span>
+          <span><strong>${tr('Aciertos para aprender una palabra fallada', 'Right answers to learn a failed word')}</strong></span>
           <span class="stepper">
             <button class="icon-btn sm" type="button" data-act="needed" data-delta="-1" aria-label="${tr('Uno menos', 'One fewer')}" ${neededRight() <= 1 ? 'disabled' : ''}>−</button>
             <output id="needed">${neededRight()}</output>
             <button class="icon-btn sm" type="button" data-act="needed" data-delta="1" aria-label="${tr('Uno más', 'One more')}" ${neededRight() >= 10 ? 'disabled' : ''}>+</button>
           </span>
         </div>
+        <div class="set-row">
+          <span><strong>${tr('Objetivo diario (palabras)', 'Daily goal (words)')}</strong></span>
+          <span class="stepper">
+            <button class="icon-btn sm" type="button" data-act="goal" data-delta="-1" aria-label="${tr('Una menos', 'One fewer')}" ${S.settings.dailyGoal <= 1 ? 'disabled' : ''}>−</button>
+            <output>${S.settings.dailyGoal}</output>
+            <button class="icon-btn sm" type="button" data-act="goal" data-delta="1" aria-label="${tr('Una más', 'One more')}" ${S.settings.dailyGoal >= 200 ? 'disabled' : ''}>+</button>
+          </span>
+        </div>
         <div class="set-group">
           <strong>${tr('Parejas de palabras en los ejemplos', 'Word pairs in the examples')}</strong>
-          <small class="hint">${tr(`Cada palabra o grupo del ejemplo en ${LANG().es.toLowerCase()} y su traducción llevan el mismo color.`, `Each word or group in the ${LANG().enName} example and its translation have the same colour.`)}</small>
           <div class="dir-switch" role="group" aria-label="${tr('Parejas de palabras en los ejemplos', 'Word pairs in the examples')}">
             ${[
               ['off', tr('Sin colores', 'No colours')],
@@ -3714,14 +3689,15 @@ h1, h2, p { margin: 0; }
         </div>
         <div class="set-group">
           <strong>${tr('Mezcla de cada tanda', 'Mix of each round')}</strong>
-          <small class="hint">${tr('Cuánto de la tanda pueden ocupar las palabras ya vistas (repasos y falladas). Lo que no cabe espera a la tanda siguiente, empezando por lo más urgente.', 'How much of the round the words already seen (reviews and missed ones) may take. What does not fit waits for the next round, most urgent first.')}</small>
-          ${[
-            ['new', tr('Más palabras nuevas', 'More new words'), tr('lo ya visto, como mucho el 40 %', 'words already seen, 40 % at most')],
-            ['balanced', tr('Equilibrado', 'Balanced'), tr('lo ya visto, como mucho la mitad', 'words already seen, half at most')],
-            ['review', tr('Primero lo pendiente', 'Due words first'), tr('todo lo que toca repasar y después nuevas', 'everything due, then new words')],
-          ]
-            .map(([v, t, h]) => `<label class="check-row"><input type="radio" name="mix" data-act="mix" value="${v}" ${(st.mix || 'balanced') === v ? 'checked' : ''}><span><b>${t}</b> · ${h}</span></label>`)
-            .join('')}
+          <div class="dir-switch" role="group" aria-label="${tr('Mezcla de cada tanda', 'Mix of each round')}">
+            ${[
+              ['new', tr('Más nuevas', 'More new')],
+              ['balanced', tr('Equilibrado', 'Balanced')],
+              ['review', tr('Primero lo pendiente', 'Due first')],
+            ]
+              .map(([v, t]) => `<button type="button" class="dir-opt${(st.mix || 'balanced') === v ? ' is-on' : ''}" data-act="mix" data-mix="${v}" aria-pressed="${(st.mix || 'balanced') === v}">${t}</button>`)
+              .join('')}
+          </div>
         </div>
         <div class="set-group">
           <strong>${tr('Orden de las tarjetas nuevas', 'Order of new cards')}</strong>
@@ -3732,18 +3708,6 @@ h1, h2, p { margin: 0; }
             .map(([v, t, h]) => `<label class="check-row"><input type="radio" name="order" data-act="order" value="${v}" ${st.order === v ? 'checked' : ''}><span><b>${t}</b> · ${h}</span></label>`)
             .join('')}
         </div>
-        <div class="set-group">
-          <strong>${tr('Sentido de las tarjetas', 'Card direction')}</strong>
-          ${dirSwitch()}
-        </div>
-        <div class="set-group" id="sec-decks">
-          <strong>${tr('Mazos incluidos en la práctica', 'Decks included in practice')}</strong>
-          ${deckRows()}
-        </div>
-      </section>
-      <section class="panel" aria-labelledby="h-voice">
-        <h2 class="eyebrow" id="h-voice">${tr('Voz', 'Voice')}</h2>
-        ${voiceBlock}
       </section>
       ${notesPanel()}
       <section class="panel" aria-labelledby="h-data">
@@ -3760,11 +3724,55 @@ h1, h2, p { margin: 0; }
       <section class="panel about" aria-labelledby="h-about">
         <h2 class="eyebrow" id="h-about">${tr('Sobre FlaXCards', 'About FlaXCards')}</h2>
         <p>${tr('FlaXCards usa el repaso espaciado del método Leitner (la caja de fichas, <i lang="de">Karteikasten</i> en alemán): cada tarjeta vuelve justo antes de que la olvides. Si fallas, vuelve en minutos; si aciertas, cada vez tarda más.', 'FlaXCards uses the spaced repetition of the Leitner system (the card box, <i lang="de">Karteikasten</i> in German): each card comes back just before you would forget it. If you get it wrong, it comes back within minutes; if you get it right, it takes longer each time.')}</p>
-        ${curLang() === 'ca' ? `<p>${tr('Las tarjetas de catalán (central, según la norma del Institut d’Estudis Catalans) se han escrito para FlaXCards; las palabras salen de las más frecuentes del catalán (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en valenciano o balear se dice de otra forma muy común, la tarjeta lo indica («VAL:»).', 'The Catalan cards (central Catalan, following the Institut d’Estudis Catalans standard) were written for FlaXCards; the words are taken from the most frequent in Catalan (wordfreq) and the level of each one follows the Common European Framework. When Valencian or Balearic commonly use another word, the card shows it (‘VAL:’).')}</p>` : ''}${curLang() === 'zh' ? `<p>${tr('Las tarjetas de chino mandarín (caracteres simplificados, con pinyin) se han escrito para FlaXCards; las palabras salen de las más frecuentes del chino (wordfreq) y el nivel de cada una sigue el Marco Común Europeo, orientado por los niveles HSK (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).', 'The Mandarin Chinese cards (simplified characters, with pinyin) were written for FlaXCards; the words are taken from the most frequent in Chinese (wordfreq) and the level of each one follows the Common European Framework, guided by the HSK levels (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).')}</p>` : ''}${curLang() === 'pt' ? `<p>${tr('Las tarjetas de portugués (de Brasil) se han escrito para FlaXCards; las palabras salen de las más frecuentes del portugués (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en Portugal se dice de otra forma, la tarjeta lo indica («PT:»).', 'The Portuguese (Brazilian) cards were written for FlaXCards; the words are taken from the most frequent in Portuguese (wordfreq) and the level of each one follows the Common European Framework. When Portugal uses another word, the card shows it (‘PT:’).')}</p>` : ''}${curLang() === 'fr' ? `<p>${tr('Los mazos de francés combinan contenido original para FlaXCards y vocabulario contrastado con FLELex/Beacco y WikDict. Los ejemplos de la ampliación proceden de Tatoeba, Europarl o se han escrito para la app; puedes consultar las fuentes en cada tarjeta. Los niveles A1–C2 son orientativos, con ajustes según significado, uso y registro; no constituyen listas oficiales del MCER.', 'The French decks combine original FlaXCards content with vocabulary checked against FLELex/Beacco and WikDict. Expansion examples come from Tatoeba, Europarl or were written for the app; each card lists its sources. A1–C2 levels are estimates, adjusted for meaning, use and register; they are not official CEFR word lists.')}</p>` : ''}${knownOf(curLang()) === 'en' ? '<p>The English side of these cards (meanings, translations of the examples, notes and hints) was translated from their Spanish for FlaXCards.</p>' : ''}
-        <p class="hint">${tr(`Versión ${VERSION} · ${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} tarjetas en ${DECKS.length} mazos, niveles ${LEVELS.map(levelName).join(', ')}.`, `Version ${VERSION} · ${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} cards in ${DECKS.length} decks, levels ${LEVELS.map(levelName).join(', ')}.`)} ${curLang() === 'en' ? `${tr('Las tarjetas de inglés británico se han escrito para FlaXCards, seleccionadas por frecuencia (wordfreq) y utilidad. Los niveles A1–C2 son orientativos; el vocabulario se ha contrastado con las listas Oxford 3000/5000.', 'The British English cards were written for FlaXCards and selected for frequency (wordfreq) and usefulness. A1–C2 levels are teaching estimates; vocabulary levels were checked against the Oxford 3000/5000 lists.')}</p>` : ''}${curLang() === 'it' ? `${tr('Las tarjetas de italiano se han escrito para FlaXCards, seleccionadas por frecuencia (wordfreq) y utilidad. Las ampliaciones revisadas incluyen vocabulario cotidiano y frases habituales; sus niveles A1–C2 son orientativos, siguiendo los descriptores del MCER/CELI.', 'The Italian cards were written for FlaXCards and selected for frequency (wordfreq) and usefulness. Reviewed additions cover everyday vocabulary and useful phrases; their A1–C2 levels are teaching estimates informed by CEFR/CELI descriptors.')}</p>` : ''}${curLang() === 'de' ? `${tr('El vocabulario reúne mazos de AnkiWeb y una ampliación revisada. Las listas Goethe (A1–B1) y las frecuencias del IDS orientan el vocabulario original; las nuevas tarjetas tienen niveles A1–C2 estimados según su significado y uso.', 'The vocabulary combines AnkiWeb decks with reviewed additions. Goethe lists (A1–B1) and IDS frequencies inform the original vocabulary; new cards have estimated A1–C2 levels based on meaning and usage.')}</p>` : ''}
+        <p class="hint">${tr(`Versión ${VERSION}`, `Version ${VERSION}`)}</p>
       </section>
     </main>`;
   }
+
+  // the Ajustes of the language being studied (the gear inside it): card direction, decks, voice, and its decks
+  function viewLangSettings() {
+    const st = S.settings;
+    const voices = Speech.voices;
+    const voiceBlock = Speech.ok
+      ? `<label class="switch-row"><span><strong>${tr(`Leer la palabra en ${LANG().es.toLowerCase()}`, `Read the ${LANG().enName} word aloud`)}</strong><small>${tr(`Se oye una vez, en cuanto aparece en la tarjeta. Para oírla otra vez, pulsa el altavoz.`, `It is heard once, as soon as it appears on the card. To hear it again, tap the speaker.`)}</small></span><input type="checkbox" data-act="auto-speak" ${st.autoSpeak ? 'checked' : ''}></label>
+        <label class="field"><span>${tr('Velocidad', 'Speed')} <output id="rate-out">${Math.round(st.rate * 100)} %</output></span><input type="range" id="rate" min="0.6" max="1.2" step="0.05" value="${st.rate}"></label>
+        <label class="field"><span>${tr(`Voz ${LANG().adj}`, `${LANG().enName} voice`)}</span><select id="voice">
+          <option value="">${tr('Automática', 'Automatic')}</option>
+          ${voices.map((v) => `<option value="${esc(v.voiceURI)}"${v.voiceURI === savedVoice() ? ' selected' : ''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('')}
+        </select></label>
+        ${voices.length ? '' : `<p class="hint">${tr(`No aparece ninguna voz ${LANG().adj}. En Android: Ajustes › Sistema › Idiomas › Salida de texto a voz, y descarga los datos de voz en ${LANG().es.toLowerCase()}.`, `No ${LANG().enName} voice is available. On Android: Settings › System › Languages › Text-to-speech output, and download the ${LANG().enName} voice data.`)}</p>`}
+        <button class="btn" type="button" data-act="test-voice">${tr('Probar la voz', 'Test the voice')}</button>`
+      : `<p class="hint">${tr('Este navegador no puede leer texto en voz alta.', 'This browser cannot read text aloud.')}</p>`;
+    return `
+    <header class="topbar">
+      <button class="icon-btn" type="button" data-act="home" aria-label="${tr('Volver al inicio', 'Back to home')}">${ICON.back}</button>
+      <span class="topbar-title">${tr(`Ajustes · ${LANG().es}`, `Settings · ${LANG().enName}`)}</span>
+      <span class="icon-spacer"></span>
+    </header>
+    <main class="screen">
+      <section class="panel" aria-labelledby="h-lang-study">
+        <h2 class="eyebrow" id="h-lang-study">${tr('Estudio', 'Study')}</h2>
+        <div class="set-group">
+          <strong>${tr('Sentido de las tarjetas', 'Card direction')}</strong>
+          ${dirSwitch()}
+        </div>
+        <div class="set-group" id="sec-decks">
+          <strong>${tr('Mazos incluidos en la práctica', 'Decks included in practice')}</strong>
+          ${deckRows()}
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="h-voice">
+        <h2 class="eyebrow" id="h-voice">${tr('Voz', 'Voice')}</h2>
+        ${voiceBlock}
+      </section>
+      <section class="panel about" aria-labelledby="h-lang-about">
+        <h2 class="eyebrow" id="h-lang-about">${tr('Sobre estos mazos', 'About these decks')}</h2>
+        ${curLang() === 'ca' ? `<p>${tr('Las tarjetas de catalán (central, según la norma del Institut d’Estudis Catalans) se han escrito para FlaXCards; las palabras salen de las más frecuentes del catalán (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en valenciano o balear se dice de otra forma muy común, la tarjeta lo indica («VAL:»).', 'The Catalan cards (central Catalan, following the Institut d’Estudis Catalans standard) were written for FlaXCards; the words are taken from the most frequent in Catalan (wordfreq) and the level of each one follows the Common European Framework. When Valencian or Balearic commonly use another word, the card shows it (‘VAL:’).')}</p>` : ''}${curLang() === 'zh' ? `<p>${tr('Las tarjetas de chino mandarín (caracteres simplificados, con pinyin) se han escrito para FlaXCards; las palabras salen de las más frecuentes del chino (wordfreq) y el nivel de cada una sigue el Marco Común Europeo, orientado por los niveles HSK (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).', 'The Mandarin Chinese cards (simplified characters, with pinyin) were written for FlaXCards; the words are taken from the most frequent in Chinese (wordfreq) and the level of each one follows the Common European Framework, guided by the HSK levels (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).')}</p>` : ''}${curLang() === 'pt' ? `<p>${tr('Las tarjetas de portugués (de Brasil) se han escrito para FlaXCards; las palabras salen de las más frecuentes del portugués (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en Portugal se dice de otra forma, la tarjeta lo indica («PT:»).', 'The Portuguese (Brazilian) cards were written for FlaXCards; the words are taken from the most frequent in Portuguese (wordfreq) and the level of each one follows the Common European Framework. When Portugal uses another word, the card shows it (‘PT:’).')}</p>` : ''}${curLang() === 'fr' ? `<p>${tr('Los mazos de francés combinan contenido original para FlaXCards y vocabulario contrastado con FLELex/Beacco y WikDict. Los ejemplos de la ampliación proceden de Tatoeba, Europarl o se han escrito para la app; puedes consultar las fuentes en cada tarjeta. Los niveles A1–C2 son orientativos, con ajustes según significado, uso y registro; no constituyen listas oficiales del MCER.', 'The French decks combine original FlaXCards content with vocabulary checked against FLELex/Beacco and WikDict. Expansion examples come from Tatoeba, Europarl or were written for the app; each card lists its sources. A1–C2 levels are estimates, adjusted for meaning, use and register; they are not official CEFR word lists.')}</p>` : ''}${knownOf(curLang()) === 'en' ? '<p>The English side of these cards (meanings, translations of the examples, notes and hints) was translated from their Spanish for FlaXCards.</p>' : ''}
+        <p class="hint">${tr(`${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} tarjetas en ${DECKS.length} mazos, niveles ${LEVELS.map(levelName).join(', ')}.`, `${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} cards in ${DECKS.length} decks, levels ${LEVELS.map(levelName).join(', ')}.`)} ${curLang() === 'en' ? `${tr('Las tarjetas de inglés británico se han escrito para FlaXCards, seleccionadas por frecuencia (wordfreq) y utilidad. Los niveles A1–C2 son orientativos; el vocabulario se ha contrastado con las listas Oxford 3000/5000.', 'The British English cards were written for FlaXCards and selected for frequency (wordfreq) and usefulness. A1–C2 levels are teaching estimates; vocabulary levels were checked against the Oxford 3000/5000 lists.')}</p>` : ''}${curLang() === 'it' ? `${tr('Las tarjetas de italiano se han escrito para FlaXCards, seleccionadas por frecuencia (wordfreq) y utilidad. Las ampliaciones revisadas incluyen vocabulario cotidiano y frases habituales; sus niveles A1–C2 son orientativos, siguiendo los descriptores del MCER/CELI.', 'The Italian cards were written for FlaXCards and selected for frequency (wordfreq) and usefulness. Reviewed additions cover everyday vocabulary and useful phrases; their A1–C2 levels are teaching estimates informed by CEFR/CELI descriptors.')}</p>` : ''}${curLang() === 'de' ? `${tr('El vocabulario reúne mazos de AnkiWeb y una ampliación revisada. Las listas Goethe (A1–B1) y las frecuencias del IDS orientan el vocabulario original; las nuevas tarjetas tienen niveles A1–C2 estimados según su significado y uso.', 'The vocabulary combines AnkiWeb decks with reviewed additions. Goethe lists (A1–B1) and IDS frequencies inform the original vocabulary; new cards have estimated A1–C2 levels based on meaning and usage.')}</p>` : ''}
+      </section>
+    </main>`;
+  }
+
 
   // the decks of the practice in Ajustes: Wortschatz first, then "Überprüfen" (words to check), then the rest
   function deckRows() {
@@ -3774,7 +3782,7 @@ h1, h2, p { margin: 0; }
     const nh = new Set(hardKeys().map(wordOf)).size;
     const hard = `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${HARD}" ${hardOn() ? 'checked' : ''}><span lang="${curLang()}">${LANG().hard}</span><span class="check-levels">${nh ? tr(`${fmtInt(nh)} palabras`, `${fmtInt(nh)} ${nh === 1 ? 'word' : 'words'}`) : tr('vacío', 'empty')}</span></label>`;
     const first = DECKS.filter((d) => d.id === LANG().main);
-    const help = `<p class="hint">${tr(`<b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. En el modo Estudio (en la pantalla del idioma) ocupan un 10 % de cada tanda; en el modo Repaso, la tanda sale solo de ellos mientras tengan palabras pendientes. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en Estudio) para que vuelva a contar como aprendida.`, `<b>${LANG().review}</b>: the failed words you have not learned yet. <b>${LANG().hard}</b>: every word you did not learn the first time (even if you know it now); the ones you failed this week or last week come first, and older ones less and less often. In Study mode (on the language screen) they take 10 % of each round; in Review mode, the round comes only from them while they have words to go. If you fail a word you already knew, you will need to get it right ${neededRight()} ${neededRight() === 1 ? 'time' : 'times in a row'} (the number set under Study) for it to count as learned again.`)}</p>`;
+    const help = `<p class="hint">${tr(`<b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. En el modo Estudio (en la pantalla del idioma) ocupan un 10 % de cada tanda; en el modo Repaso, la tanda sale solo de ellos mientras tengan palabras pendientes. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en los Ajustes generales, en la pantalla de idiomas) para que vuelva a contar como aprendida.`, `<b>${LANG().review}</b>: the failed words you have not learned yet. <b>${LANG().hard}</b>: every word you did not learn the first time (even if you know it now); the ones you failed this week or last week come first, and older ones less and less often. In Study mode (on the language screen) they take 10 % of each round; in Review mode, the round comes only from them while they have words to go. If you fail a word you already knew, you will need to get it right ${neededRight()} ${neededRight() === 1 ? 'time' : 'times in a row'} (the number set in the general Settings, on the languages screen) for it to count as learned again.`)}</p>`;
     return first.map(row).join('') + check + hard + DECKS.filter((d) => d.id !== LANG().main).map(row).join('') + help;
   }
   // the public ranking of the 50 longest study streaks (accounts only; read from the server, signed in or not)
@@ -4652,7 +4660,7 @@ h1, h2, p { margin: 0; }
         </div>
       </div>`;
   }
-  const VIEWS = { langs: viewLangs, streaks: viewStreaks, progress: viewProgressScreen, home: viewHome, deck: viewDeck, study: viewStudy, done: viewDone, browse: viewBrowse, settings: viewSettings, compete: viewCompete, quiz: viewQuiz, quizResult: viewQuizResult, welcome: viewWelcome };
+  const VIEWS = { langs: viewLangs, streaks: viewStreaks, progress: viewProgressScreen, home: viewHome, deck: viewDeck, study: viewStudy, done: viewDone, browse: viewBrowse, settings: viewSettings, langsettings: viewLangSettings, compete: viewCompete, quiz: viewQuiz, quizResult: viewQuizResult, welcome: viewWelcome };
   // light or dark: the half-filled circle switches; until it is used, the phone's setting decides
   const isDark = () => S.settings.theme === 'dark' || (S.settings.theme !== 'light' && !!window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   function applyTheme() {
@@ -4796,9 +4804,8 @@ h1, h2, p { margin: 0; }
     }
   })();
   // how many steps back to the languages screen (for the phone's back button): Ajustes and the streaks ranking
-  // opened from it are one step away
-  const depthOf = (screen) =>
-    screen === 'langs' || screen === 'welcome' ? 0 : screen === 'home' || screen === 'streaks' || (screen === 'settings' && ui.settingsFrom === 'langs') ? 1 : 2;
+  // are opened from it
+  const depthOf = (screen) => (screen === 'langs' || screen === 'welcome' ? 0 : screen === 'home' || screen === 'streaks' || screen === 'settings' ? 1 : 2);
   let navDepth = 0; // history entries this app has pushed
   let ignorePop = false;
   function go(screen, extra) {
@@ -4978,8 +4985,11 @@ h1, h2, p { margin: 0; }
         go('streaks');
         loadStreakBoard();
         break;
-      case 'settings': {
-        go('settings', { confirmReset: false, importOpen: false, exportText: '', settingsFrom: ui.screen === 'langs' ? 'langs' : 'home' });
+      case 'settings':
+        go('settings', { confirmReset: false, importOpen: false, exportText: '' });
+        break;
+      case 'lang-settings': {
+        go('langsettings');
         const target = el.dataset.focus && document.getElementById(el.dataset.focus);
         if (target) target.scrollIntoView({ block: 'start' });
         break;
@@ -5055,8 +5065,9 @@ h1, h2, p { margin: 0; }
         saveSettings();
         break;
       case 'mix':
-        if (MIX[el.value]) S.settings.mix = el.value;
+        if (MIX[el.dataset.mix]) S.settings.mix = el.dataset.mix;
         saveSettings();
+        render();
         break;
       case 'mode':
         // review mode ticks "Überprüfen" and "Schwierige Wörter"
@@ -5121,14 +5132,7 @@ h1, h2, p { margin: 0; }
   });
   app.addEventListener('change', (e) => {
     const t = e.target;
-    if (t.id === 'set-lang' && LANGS.some((l) => l.id === t.value)) {
-      // the language whose decks, direction and voice Ajustes shows: as if it had been opened
-      S.settings.lang = t.value;
-      useLang(S.settings.lang);
-      if (!DECKS.some(isActive) && deckById(LANG().main)) S.settings.decks = [...S.settings.decks, LANG().main];
-      saveSettings();
-      render();
-    } else if (t.id === 'voice') {
+    if (t.id === 'voice') {
       setVoice(t.value);
       saveSettings();
       Speech.say(curLang() === 'de' ? 'Guten Tag!' : 'Good morning!');
