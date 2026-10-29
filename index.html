@@ -496,6 +496,11 @@ h1, h2, p { margin: 0; }
 .streak-meta svg { width: 14px; height: 14px; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
+.board-tabs { margin-bottom: 2px; }
+.acc-filters { display: grid; gap: 10px; }
+.levels-sm .level { padding: 6px 2px; }
+.levels-sm .level-name { font-size: 1.05rem; }
+.board-name small { display: block; font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
 /* language home: the known words take the place of the app name */
 .home-top { gap: 6px; }
 .home-top .hero { flex: 1; min-width: 0; padding: 0; gap: 10px; }
@@ -1219,7 +1224,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.27';
+  const VERSION = '5.28';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3254,7 +3259,7 @@ h1, h2, p { margin: 0; }
     useLang(shown);
     return `
     <main class="screen langs has-top">
-      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificación de rachas largas', 'Longest streaks ranking')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
+      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificaciones', 'Rankings')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
       <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       <section class="lang-section" aria-labelledby="h-langs">
         ${streakHero(today)}
@@ -3784,41 +3789,75 @@ h1, h2, p { margin: 0; }
     const help = `<p class="hint">${tr(`<b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. En el modo Estudio (en la pantalla del idioma), el 90 % de cada tanda son palabras nuevas y estos mazos van en el 10 % restante; en el modo Repaso es al revés: el 90 % sale de estos mazos (y, si no llegan, de los repasos que te tocan) y el resto, de palabras nuevas. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en los Ajustes generales, en la pantalla de idiomas) para que vuelva a contar como aprendida.`, `<b>${LANG().review}</b>: the failed words you have not learned yet. <b>${LANG().hard}</b>: every word you did not learn the first time (even if you know it now); the ones you failed this week or last week come first, and older ones less and less often. In Study mode (on the language screen), 90 % of each round is new words and these decks go in the other 10 %; in Review mode it is the other way round: 90 % comes from these decks (and, if they run short, from the reviews due) and the rest from new words. If you fail a word you already knew, you will need to get it right ${neededRight()} ${neededRight() === 1 ? 'time' : 'times in a row'} (the number set in the general Settings, on the languages screen) for it to count as learned again.`)}</p>`;
     return first.map(row).join('') + check + hard + DECKS.filter((d) => d.id !== LANG().main).map(row).join('') + help;
   }
-  // the public ranking of the 50 longest study streaks (accounts only; read from the server, signed in or not)
-  async function loadStreakBoard() {
-    ui.streakBoard = { loading: true };
+  // the public rankings of the cup (accounts only; read from the server, signed in or not): the 50 longest study
+  // streaks, and the 50 best of the week in ranked games (% right × days played / 7), of all languages, of one, or of
+  // one and some of its levels
+  let boardAsk = 0;
+  async function loadBoard() {
+    const tab = ui.boardTab === 'accuracy' ? 'accuracy' : 'streaks';
+    const ask = ++boardAsk; // only the last request is shown
+    ui.board = { tab, loading: true };
     render();
     try {
       const c = await compClient();
-      const { data, error } = await c.rpc('streak_leaderboard', { p_limit: 50 });
+      const levels = ui.accLang && (ui.accLevels || []).length ? ui.accLevels : null;
+      const { data, error } = tab === 'streaks'
+        ? await c.rpc('streak_leaderboard', { p_limit: 50 })
+        : await c.rpc('accuracy_leaderboard', { p_language: ui.accLang || null, p_levels: levels, p_limit: 50 });
       if (error) throw error;
-      ui.streakBoard = { rows: data || [] };
+      if (ask === boardAsk) ui.board = { tab, rows: data || [] };
     } catch (e) {
-      ui.streakBoard = { error: true };
+      if (ask === boardAsk) ui.board = { tab, error: true };
     }
-    if (ui.screen === 'streaks') render();
+    if (ask === boardAsk && ui.screen === 'streaks') render();
   }
   function viewStreaks() {
-    const b = ui.streakBoard || { loading: true };
+    const tab = ui.boardTab === 'accuracy' ? 'accuracy' : 'streaks';
+    const b = ui.board && ui.board.tab === tab ? ui.board : { loading: true };
+    const row = (r, pts, meta = '') => `<li class="board-row${r.is_me ? ' is-me' : ''}"><span class="board-rank">${r.rank}</span><span class="board-name">${esc(r.username)}${meta}</span><span class="board-pts">${pts}</span></li>`;
     const rows = (b.rows || [])
-      .map((r) => `<li class="board-row${r.is_me ? ' is-me' : ''}"><span class="board-rank">${r.rank}</span><span class="board-name">${esc(r.username)}</span><span class="board-pts">${ICON.flame}${fmtInt(r.days)} ${r.days === 1 ? tr('día', 'day') : tr('días', 'days')}</span></li>`)
+      .map((r) => tab === 'streaks'
+        ? row(r, `${ICON.flame}${fmtInt(r.days)} ${r.days === 1 ? tr('día', 'day') : tr('días', 'days')}`)
+        : row(r, fmtNum(Number(r.score)), `<small>${fmtNum(Number(r.accuracy))} % · ${tr(`${r.days} de 7 días`, `${r.days} of 7 days`)}</small>`))
       .join('');
+    const empty = tab === 'streaks'
+      ? tr('Todavía no hay rachas. ¡Estudia hoy y sé el primero!', 'No streaks yet. Study today and be the first!')
+      : tr('Nadie ha jugado aquí partidas puntuables esta semana.', 'Nobody has played ranked games here this week.');
     const body = b.loading
       ? `<p class="hint">${tr('Cargando…', 'Loading…')}</p>`
       : b.error
-        ? `<p class="hint">${tr('No se ha podido cargar la clasificación. Comprueba la conexión y vuelve a intentarlo.', 'The ranking could not be loaded. Check your connection and try again.')}</p><button class="btn" type="button" data-act="streak-board">${tr('Reintentar', 'Try again')}</button>`
+        ? `<p class="hint">${tr('No se ha podido cargar la clasificación. Comprueba la conexión y vuelve a intentarlo.', 'The ranking could not be loaded. Check your connection and try again.')}</p><button class="btn" type="button" data-act="board-tab" data-tab="${tab}">${tr('Reintentar', 'Try again')}</button>`
         : rows
-          ? `<ol class="board streak-board">${rows}</ol>`
-          : `<p class="hint">${tr('Todavía no hay rachas. ¡Estudia hoy y sé el primero!', 'No streaks yet. Study today and be the first!')}</p>`;
+          ? `<ol class="board${tab === 'streaks' ? ' streak-board' : ' accuracy-board'}">${rows}</ol>`
+          : `<p class="hint">${empty}</p>`;
+    // % of right answers: all languages or one, and then (optionally) some of its levels
+    const filters = tab === 'accuracy'
+      ? `<div class="acc-filters">
+          <label class="field"><span>${tr('Idioma', 'Language')}</span><select id="acc-lang">
+            <option value="">${tr('Todos los idiomas', 'All languages')}</option>
+            ${Object.keys(COMP_LANGUAGES).map((l) => `<option value="${l}"${ui.accLang === l ? ' selected' : ''}>${tr(...COMP_LANGUAGES[l].name)}</option>`).join('')}
+          </select></label>
+          ${ui.accLang ? `<nav class="levels levels-sm" aria-label="${tr('Niveles (ninguno: todos)', 'Levels (none: all)')}">${LEVEL_ORDER.map((lv) => {
+            const on = (ui.accLevels || []).includes(lv);
+            return `<button class="level${on ? ' is-on' : ''}" type="button" data-act="acc-level" data-level="${lv}" aria-pressed="${on}"><span class="level-name">${lv}</span></button>`;
+          }).join('')}</nav>` : ''}
+        </div>`
+      : '';
     return `
     <header class="topbar">
       <button class="icon-btn" type="button" data-act="langs" aria-label="${tr('Volver a los idiomas', 'Back to languages')}">${ICON.back}</button>
-      <span class="topbar-title">${tr('Clasificación de rachas largas', 'Longest streaks ranking')}</span>
+      <span class="topbar-title">${tr('Clasificaciones', 'Rankings')}</span>
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
-      <section class="panel" aria-labelledby="h-streaks">
-        <h2 class="eyebrow" id="h-streaks">${tr('Las 50 rachas más largas', 'The 50 longest streaks')}</h2>
+      <div class="dir-switch board-tabs" role="group" aria-label="${tr('Clasificación', 'Ranking')}">
+        ${[['streaks', tr('Rachas largas', 'Longest streaks')], ['accuracy', tr('% de aciertos', '% right')]]
+          .map(([v, l]) => `<button type="button" class="dir-opt${tab === v ? ' is-on' : ''}" data-act="board-tab" data-tab="${v}" aria-pressed="${tab === v}">${l}</button>`)
+          .join('')}
+      </div>
+      <section class="panel" aria-labelledby="h-board">
+        <h2 class="eyebrow" id="h-board">${tab === 'streaks' ? tr('Las 50 rachas más largas', 'The 50 longest streaks') : tr('Los 50 mejores de esta semana', 'The 50 best this week')}</h2>
+        ${filters}
         ${body}
       </section>
     </main>`;
@@ -5060,8 +5099,20 @@ h1, h2, p { margin: 0; }
         break;
       case 'streak-board':
         go('streaks');
-        loadStreakBoard();
+        loadBoard();
         break;
+      case 'board-tab':
+        ui.boardTab = el.dataset.tab === 'accuracy' ? 'accuracy' : 'streaks';
+        loadBoard();
+        break;
+      case 'acc-level': {
+        const on = new Set(ui.accLevels || []);
+        if (on.has(el.dataset.level)) on.delete(el.dataset.level);
+        else on.add(el.dataset.level);
+        ui.accLevels = LEVEL_ORDER.filter((lv) => on.has(lv));
+        loadBoard();
+        break;
+      }
       case 'settings':
         go('settings', { confirmReset: false, importOpen: false, exportText: '' });
         break;
@@ -5211,7 +5262,11 @@ h1, h2, p { margin: 0; }
   });
   app.addEventListener('change', (e) => {
     const t = e.target;
-    if (t.id === 'voice') {
+    if (t.id === 'acc-lang') {
+      ui.accLang = compValidLanguage(t.value) ? t.value : null;
+      ui.accLevels = [];
+      loadBoard();
+    } else if (t.id === 'voice') {
       setVoice(t.value);
       saveSettings();
       Speech.say(curLang() === 'de' ? 'Guten Tag!' : 'Good morning!');
