@@ -361,6 +361,7 @@ h1, h2, p { margin: 0; }
 .btn-primary:hover { border-color: var(--accent); filter: brightness(1.07); }
 .btn-danger { background: var(--again-bg); border-color: transparent; color: var(--again-ink); }
 .btn-danger:hover { border-color: var(--again-ink); }
+.btn-account svg { width: 18px; height: 18px; flex: none; }
 
 /* ---------- level tabs (CEFR) ---------- */
 .levels {
@@ -493,8 +494,6 @@ h1, h2, p { margin: 0; }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
 .streak-meta svg { width: 14px; height: 14px; }
-.streak-hero .streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
-.streak-board-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
 /* language home: the known words take the place of the app name */
@@ -605,6 +604,7 @@ h1, h2, p { margin: 0; }
 .pg-table th:first-child { text-align: left; font-weight: 400; white-space: normal; }
 .pg-table thead th { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
 .pg-table tr.is-current th, .pg-table tr.is-current td { font-weight: 700; }
+.pg-more { min-height: 44px; }
 
 /* progress swatches and meter (deck screen) */
 .sw { display: inline-block; width: 12px; height: 8px; border-radius: 2px; flex: none; }
@@ -676,6 +676,12 @@ h1, h2, p { margin: 0; }
 .stepper output { min-width: 2.5ch; text-align: center; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .set-group { display: grid; }
 .set-group > strong { padding-bottom: 6px; }
+/* general Ajustes: each setting apart, with a line between them */
+.set-list { gap: 0; }
+.set-list > * { padding: 18px 0; }
+.set-list > * + * { border-top: 2px solid var(--line); }
+.set-list > :first-child { padding-top: 2px; }
+.set-list > :last-child { padding-bottom: 2px; }
 .check-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .check-row input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
 .field { display: grid; gap: 6px; }
@@ -1013,7 +1019,9 @@ h1, h2, p { margin: 0; }
   color: var(--paper);
   font-size: 0.9375rem;
   box-shadow: var(--shadow);
+  transition: opacity 0.6s ease;
 }
+.toast.is-out { opacity: 0; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
@@ -1190,7 +1198,7 @@ h1, h2, p { margin: 0; }
 .lang-tile { min-width: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
-.langs-top-left { display: inline-flex; align-items: center; gap: 4px; }
+.langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
@@ -1206,7 +1214,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.25';
+  const VERSION = '5.26';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -1217,12 +1225,12 @@ h1, h2, p { margin: 0; }
   // a wrong one sends it back to the start; a word right in the last box stays there.
   const BOXES = [1, 3, 7, 14, 30, 90];
   const FIRST_BOX = 3; // a new word right the first time was known already: back in BOXES[2] = 7 days
-  const MIX = { new: 0.1, balanced: 0.5, review: 1 }; // share of a batch the words already seen may take
   const SYNC_DELAY = 4000;
   const NO_FRONT_AUDIO = new Set(['meine-fehler']); // that front is deliberately wrong German
   const LEVEL_ORDER = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
   const SHARD_SIZE = 1500; // cards per saved progress document (each document holds at most 256 KB)
   const BROWSE_LIMIT = 150;
+  const PG_ROWS = 4; // days, weeks or months in the progress table before "Ver más"
   const MAX_SHIELDS = 5; // streak protectors you can keep at most
   const SHIELD_EVERY = 5; // studying this many days in a row earns one protector
   const STREAK_MIN = 10; // cards answered in a day (all languages together) for the day to count in the streak
@@ -1230,9 +1238,8 @@ h1, h2, p { margin: 0; }
   // dir: which side you see first ('es' Spanish → German, 'de' German → Spanish, 'both');
   // order: new cards drawn at random ('random') or most frequent first ('frequency')
   // sessionSize: cards in each practice batch; shields: streak protectors (you start with 2);
-  // mix: how much of a batch the words already seen may take ('new' less, 'balanced' half, 'review' all of it)
-  // mode: the practice of the levels in study or review mode (see planBatch)
-  const DEFAULTS = { sessionSize: 20, mix: 'balanced', mode: 'study', shields: 2, autoSpeak: true, rate: 0.9, voice: '', decks: ['wortschatz'], levels: ['B2'], dir: 'es', order: 'random', dailyGoal: 10, neededRight: 3, theme: '', pairStyle: 'off', uiLang: '', resetAt: 0, updatedAt: 0 };
+  // mode: the practice in study or review mode (see planBatch)
+  const DEFAULTS = { sessionSize: 20, mode: 'study', shields: 2, autoSpeak: true, rate: 0.9, voice: '', decks: ['wortschatz'], levels: ['B2'], dir: 'es', order: 'random', dailyGoal: 10, neededRight: 3, theme: '', pairStyle: 'off', uiLang: '', resetAt: 0, updatedAt: 0 };
   // the language of the app itself (its buttons and texts, not the cards): Spanish or English. It is chosen on the
   // first screen and changed with the flag on the languages screen; tr(es, en) gives each text in it
   const uiLang = () => (S.settings.uiLang === 'en' ? 'en' : 'es');
@@ -1438,7 +1445,7 @@ h1, h2, p { margin: 0; }
     number('updatedAt', 0, 9e15);
     if (typeof raw.autoSpeak === 'boolean') s.autoSpeak = raw.autoSpeak;
     if (typeof raw.voice === 'string' && raw.voice.length <= 512) s.voice = raw.voice;
-    for (const [key, allowed] of Object.entries({ dir: ['es', 'de', 'both'], order: ['random', 'frequency'], mix: ['new', 'balanced', 'review'], mode: ['study', 'review'], theme: ['', 'light', 'dark'], pairStyle: ['bg', 'text', 'off'], uiLang: ['', 'es', 'en'] })) {
+    for (const [key, allowed] of Object.entries({ dir: ['es', 'de', 'both'], order: ['random', 'frequency'], mode: ['study', 'review'], theme: ['', 'light', 'dark'], pairStyle: ['bg', 'text', 'off'], uiLang: ['', 'es', 'en'] })) {
       if (allowed.includes(raw[key])) s[key] = raw[key];
     }
     if (raw.pairStyle === undefined && raw.colorPairs === false) s.pairStyle = 'off';
@@ -1711,9 +1718,10 @@ h1, h2, p { margin: 0; }
   // each practice batch ("tanda") has this many cards (see planBatch). Leaving a batch halfway does not matter:
   // what was answered is saved and the next "Empezar" gives a full batch again.
   const batchSize = () => S.settings.sessionSize;
-  // the practice of the levels has two modes: study (new words and reviews, with REVIEW_SHARE of the batch for
-  // "Überprüfen" and "Schwierige Wörter") and review (only the words of those two, while they have any)
-  const REVIEW_SHARE = 0.1;
+  // the practice has two modes: study (most of each batch new words) and review (most of it the words to review:
+  // those of "Überprüfen" and "Schwierige Wörter", then the ones being learned and the reviews due). The other
+  // kind takes MINOR_SHARE of the batch (see planBatch)
+  const MINOR_SHARE = 0.1;
   const reviewMode = () => S.settings.mode === 'review';
   // "Überprüfen": a deck made on the fly with every word of the language you failed or sent to "Repasar" that is
   // not known yet, from any deck and any level
@@ -1848,12 +1856,10 @@ h1, h2, p { margin: 0; }
     const size = batchSize();
     const random = S.settings.order === 'random' && !count;
     const mix = (list) => (random ? shuffle(list) : list);
-    // "Überprüfen" and "Schwierige Wörter" belong to the practice of the levels, not to that of one deck: in review
-    // mode the batch is made of their words alone (while they have any); in study mode they take REVIEW_SHARE
+    // "Überprüfen" and "Schwierige Wörter" belong to the practice of the levels, not to that of one deck (in review
+    // mode "Überprüfen" brings even the failed words waiting for another day)
     const levels = !String(scope).includes('/');
-    let picks = levels ? reviewPicks(reviewMode(), now) : [];
-    if (reviewMode() && picks.length) return { main: mix(picks.slice(0, size)), learning: new Set() };
-    picks = picks.slice(0, picks.length ? Math.max(1, Math.round(size * REVIEW_SHARE)) : 0);
+    const picks = levels ? reviewPicks(reviewMode(), now) : [];
     const taken = new Set(picks.map(wordOf));
     const learnDue = []; // being learned, and not waiting for another day
     const due = [];
@@ -1874,16 +1880,17 @@ h1, h2, p { margin: 0; }
       // decks are ordered from most to least frequent; in random mode the new cards are drawn by lot
       if (pool.length) pools.push(mix(pool));
     }
-    // the words already seen (being learned, then reviews, most overdue first) take at most the share of the mix;
-    // new cards fill the batch, one from each deck in turn; when there are not enough new ones, more of the old
-    // ones come in. What does not fit waits for the next batch.
-    const rest = size - picks.length;
+    // the words to review (those of the two decks, then the ones being learned and the reviews, most overdue first)
+    // take MINOR_SHARE of the batch in study mode and all but that in review mode; new cards fill the rest, one
+    // from each deck in turn. When one kind runs short, the other fills the batch. What does not fit waits for the
+    // next batch.
     const tie = new Map(due.map((id) => [id, Math.random()]));
     due.sort((a, b) => S.cards[a].d - S.cards[b].d || tie.get(a) - tie.get(b));
-    const old = [...learnDue, ...due];
-    let oldIn = Math.min(old.length, Math.round(rest * (MIX[S.settings.mix] || MIX.balanced)));
+    const old = [...picks, ...learnDue, ...due];
+    const minor = Math.max(1, Math.round(size * MINOR_SHARE));
+    let oldIn = Math.min(old.length, reviewMode() ? size - minor : minor);
     const fresh = [];
-    for (let k = 0; fresh.length < rest - oldIn && pools.length; k++) {
+    for (let k = 0; fresh.length < size - oldIn && pools.length; k++) {
       const idx = k % pools.length;
       fresh.push(pools[idx].shift());
       if (!pools[idx].length) {
@@ -1891,9 +1898,10 @@ h1, h2, p { margin: 0; }
         k -= 1;
       }
     }
-    oldIn = Math.min(old.length, rest - fresh.length);
-    const learning = new Set(old.slice(0, oldIn).filter((k) => S.cards[k].s !== 2));
-    const reviews = old.slice(0, oldIn).filter((k) => S.cards[k].s === 2);
+    oldIn = Math.min(old.length, size - fresh.length);
+    const first = old.slice(0, Math.min(oldIn, picks.length));
+    const learning = new Set(old.slice(picks.length, oldIn).filter((k) => S.cards[k].s !== 2));
+    const reviews = old.slice(picks.length, oldIn).filter((k) => S.cards[k].s === 2);
     // new cards spread among the reviews, and the words of "Überprüfen" and "Schwierige Wörter" first
     const main = [];
     const every = fresh.length ? Math.max(1, Math.round(reviews.length / fresh.length)) : Infinity;
@@ -1903,7 +1911,7 @@ h1, h2, p { margin: 0; }
       for (let j = 0; j < every && r < reviews.length; j++) main.push(reviews[r++]);
       if (f < fresh.length) main.push(fresh[f++]);
     }
-    main.unshift(...picks);
+    main.unshift(...first);
     return { main: mix(main), learning }; // in random mode, a different order every time a session starts
   }
 
@@ -3047,8 +3055,10 @@ h1, h2, p { margin: 0; }
         return `<button type="button" class="pg-col${p.current ? ' is-current' : ''}" data-act="pg-col" data-i="${i}" aria-label="${esc(periodRead(p))}"><i class="pg-bar" style="height:${h}%"></i><i class="pg-goal" style="bottom:${(p.goal / max) * 100}%"></i></button>`;
       })
       .join('');
+    // the table shows the last PG_ROWS days, weeks or months; "Ver más" opens the rest
+    const older = Math.max(0, list.length - PG_ROWS);
     const rows = list
-      .slice()
+      .slice(ui.pgAll ? 0 : older)
       .reverse()
       .map((p) => {
         const d = p.value - p.goal;
@@ -3080,7 +3090,7 @@ h1, h2, p { margin: 0; }
             <tbody>${rows}</tbody>
           </table>
         </div>
-        <p class="hint">${tr(`Una palabra es <b>conocida</b> si la aciertas a la primera; si la has fallado o la has mandado a «Repasar», necesita ${neededRight()} aciertos seguidos (se cambia en Ajustes). Todas las cifras cuentan lo mismo: las palabras conocidas de los mazos marcados en Ajustes, en los niveles seleccionados en el inicio (${levelsLabel(curLevels())}), igual que el número de arriba y el de la bandera. La gráfica las reparte por el día en que pasaron a ser conocidas; si olvidas una y la vuelves a aprender, cuenta el día nuevo. La racha cuenta todos los días que estudias.`, `A word is <b>known</b> if you get it right the first time; if you have failed it or sent it to ‘Later’, it needs ${neededRight()} right answers in a row (you can change this in Settings). All the figures count the same thing: the known words of the decks ticked in Settings, at the levels selected on the home screen (${levelsLabel(curLevels())}), like the number at the top and the one under the flag. The chart spreads them over the day they became known; if you forget one and learn it again, the new day counts. The streak counts every day you study.`)}</p>
+        ${older ? `<button class="btn pg-more" type="button" data-act="pg-more" aria-expanded="${!!ui.pgAll}">${ui.pgAll ? tr('Ver menos', 'Show less') : `+ ${tr('Ver más', 'Show more')}`}</button>` : ''}
       </section>`;
   }
   // Leitner boxes of the words in the ticked decks of the selected levels (the same words as "conocidas":
@@ -3212,7 +3222,6 @@ h1, h2, p { margin: 0; }
         <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')} <span class="streak-best">${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span></span>
         <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector: ese día no suma, pero no pierdes la racha; sin protectores, vuelve a 0. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up: that day adds nothing, but you keep your streak; with no shields, it goes back to 0. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
-        <button class="link-btn streak-board-btn" type="button" data-act="streak-board">${ICON.trophy}<span>${tr('Clasificación de rachas largas', 'Longest streaks ranking')}</span></button>
       </span>
     </section>`;
   }
@@ -3240,7 +3249,7 @@ h1, h2, p { margin: 0; }
     useLang(shown);
     return `
     <main class="screen langs has-top">
-      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}<button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span>${accountGate() ? `<button class="chip-btn" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>${tr('Cerrar sesión', 'Sign out')}</span>` : `${ICON.login}<span>${tr('Entrar', 'Sign in')}</span>`}</button>` : ''}</div>
+      <div class="langs-top"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificación de rachas largas', 'Longest streaks ranking')}">${ICON.trophy}</button>${themeBtn()}<button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
       <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       <section class="lang-section" aria-labelledby="h-langs">
         ${streakHero(today)}
@@ -3648,8 +3657,7 @@ h1, h2, p { margin: 0; }
       <span class="icon-spacer"></span>
     </header>
     <main class="screen">
-      <section class="panel" id="sec-study" aria-labelledby="h-study">
-        <h2 class="eyebrow" id="h-study">${tr('Estudio', 'Study')}</h2>
+      <section class="panel set-list" id="sec-study" aria-label="${tr('Estudio', 'Study')}">
         <div class="set-row">
           <span><strong>${tr('Tarjetas por tanda', 'Cards per round')}</strong></span>
           <span class="stepper">
@@ -3688,18 +3696,6 @@ h1, h2, p { margin: 0; }
           <p class="pair-demo"><span lang="de">${alignedHtml('{1|Ich wohne} {2|in} {3|Madrid}.')}</span> <span lang="${uiLang()}">${alignedHtml(tr('{1|Vivo} {2|en} {3|Madrid}.', '{1|I live} {2|in} {3|Madrid}.'))}</span></p>
         </div>
         <div class="set-group">
-          <strong>${tr('Mezcla de cada tanda', 'Mix of each round')}</strong>
-          <div class="dir-switch" role="group" aria-label="${tr('Mezcla de cada tanda', 'Mix of each round')}">
-            ${[
-              ['new', tr('Más nuevas', 'More new')],
-              ['balanced', tr('Equilibrado', 'Balanced')],
-              ['review', tr('Primero lo pendiente', 'Due first')],
-            ]
-              .map(([v, t]) => `<button type="button" class="dir-opt${(st.mix || 'balanced') === v ? ' is-on' : ''}" data-act="mix" data-mix="${v}" aria-pressed="${(st.mix || 'balanced') === v}">${t}</button>`)
-              .join('')}
-          </div>
-        </div>
-        <div class="set-group">
           <strong>${tr('Orden de las tarjetas nuevas', 'Order of new cards')}</strong>
           ${[
             ['random', tr('Al azar', 'At random'), tr('Se sortean cada vez que empiezas.', 'Shuffled every time you start.')],
@@ -3726,6 +3722,7 @@ h1, h2, p { margin: 0; }
         <p>${tr('FlaXCards usa el repaso espaciado del método Leitner (la caja de fichas, <i lang="de">Karteikasten</i> en alemán): cada tarjeta vuelve justo antes de que la olvides. Si fallas, vuelve en minutos; si aciertas, cada vez tarda más.', 'FlaXCards uses the spaced repetition of the Leitner system (the card box, <i lang="de">Karteikasten</i> in German): each card comes back just before you would forget it. If you get it wrong, it comes back within minutes; if you get it right, it takes longer each time.')}</p>
         <p class="hint">${tr(`Versión ${VERSION}`, `Version ${VERSION}`)}</p>
       </section>
+      ${accountGate() ? `<button class="btn btn-account" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>${tr('Cerrar sesión', 'Sign out')}</span>` : `${ICON.login}<span>${tr('Entrar o crear una cuenta', 'Sign in or create an account')}</span>`}</button>` : ''}
     </main>`;
   }
 
@@ -3782,7 +3779,7 @@ h1, h2, p { margin: 0; }
     const nh = new Set(hardKeys().map(wordOf)).size;
     const hard = `<label class="check-row"><input type="checkbox" data-act="toggle-deck" data-id="${HARD}" ${hardOn() ? 'checked' : ''}><span lang="${curLang()}">${LANG().hard}</span><span class="check-levels">${nh ? tr(`${fmtInt(nh)} palabras`, `${fmtInt(nh)} ${nh === 1 ? 'word' : 'words'}`) : tr('vacío', 'empty')}</span></label>`;
     const first = DECKS.filter((d) => d.id === LANG().main);
-    const help = `<p class="hint">${tr(`<b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. En el modo Estudio (en la pantalla del idioma) ocupan un 10 % de cada tanda; en el modo Repaso, la tanda sale solo de ellos mientras tengan palabras pendientes. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en los Ajustes generales, en la pantalla de idiomas) para que vuelva a contar como aprendida.`, `<b>${LANG().review}</b>: the failed words you have not learned yet. <b>${LANG().hard}</b>: every word you did not learn the first time (even if you know it now); the ones you failed this week or last week come first, and older ones less and less often. In Study mode (on the language screen) they take 10 % of each round; in Review mode, the round comes only from them while they have words to go. If you fail a word you already knew, you will need to get it right ${neededRight()} ${neededRight() === 1 ? 'time' : 'times in a row'} (the number set in the general Settings, on the languages screen) for it to count as learned again.`)}</p>`;
+    const help = `<p class="hint">${tr(`<b>${LANG().review}</b>: las palabras falladas que aún no has aprendido. <b>${LANG().hard}</b>: todas las que no aprendiste a la primera (aunque ya las sepas); salen antes las que fallaste esta semana o la anterior, y las más antiguas cada vez con menos probabilidad. En el modo Estudio (en la pantalla del idioma), el 90 % de cada tanda son palabras nuevas y estos mazos van en el 10 % restante; en el modo Repaso es al revés: el 90 % sale de estos mazos (y, si no llegan, de los repasos que te tocan) y el resto, de palabras nuevas. Si fallas una que ya sabías, deberás acertarla ${neededRight()} ${neededRight() === 1 ? 'vez' : 'veces seguidas'} (el número que tienes definido en los Ajustes generales, en la pantalla de idiomas) para que vuelva a contar como aprendida.`, `<b>${LANG().review}</b>: the failed words you have not learned yet. <b>${LANG().hard}</b>: every word you did not learn the first time (even if you know it now); the ones you failed this week or last week come first, and older ones less and less often. In Study mode (on the language screen), 90 % of each round is new words and these decks go in the other 10 %; in Review mode it is the other way round: 90 % comes from these decks (and, if they run short, from the reviews due) and the rest from new words. If you fail a word you already knew, you will need to get it right ${neededRight()} ${neededRight() === 1 ? 'time' : 'times in a row'} (the number set in the general Settings, on the languages screen) for it to count as learned again.`)}</p>`;
     return first.map(row).join('') + check + hard + DECKS.filter((d) => d.id !== LANG().main).map(row).join('') + help;
   }
   // the public ranking of the 50 longest study streaks (accounts only; read from the server, signed in or not)
@@ -4859,16 +4856,22 @@ h1, h2, p { margin: 0; }
     wake = null;
   }
 
+  // a message at the bottom for a few seconds (ms), that then fades out
   let toastTimer = 0;
-  function toast(msg) {
+  let toastFade = 0;
+  function toast(msg, ms = 4000) {
     const el = document.getElementById('toast');
     if (!el) return;
     el.textContent = msg;
     el.hidden = false;
+    el.classList.remove('is-out');
     clearTimeout(toastTimer);
+    clearTimeout(toastFade);
+    toastFade = setTimeout(() => el.classList.add('is-out'), ms);
     toastTimer = setTimeout(() => {
       el.hidden = true;
-    }, 4000);
+      el.classList.remove('is-out');
+    }, ms + 600);
   }
 
   // ---------------------------------------------------------------- events
@@ -4926,7 +4929,7 @@ h1, h2, p { margin: 0; }
         go('home');
         break;
       case 'progress':
-        go('progress');
+        go('progress', { pgAll: false });
         break;
       case 'lang':
         S.settings.lang = el.dataset.lang;
@@ -5040,6 +5043,11 @@ h1, h2, p { margin: 0; }
         break;
       case 'pg-view':
         ui.statsView = el.dataset.view;
+        ui.pgAll = false;
+        render();
+        break;
+      case 'pg-more':
+        ui.pgAll = !ui.pgAll;
         render();
         break;
       case 'goal':
@@ -5064,17 +5072,13 @@ h1, h2, p { margin: 0; }
         S.settings.order = el.value;
         saveSettings();
         break;
-      case 'mix':
-        if (MIX[el.dataset.mix]) S.settings.mix = el.dataset.mix;
-        saveSettings();
-        render();
-        break;
       case 'mode':
         // review mode ticks "Überprüfen" and "Schwierige Wörter"
         S.settings.mode = el.dataset.mode === 'review' ? 'review' : 'study';
         if (reviewMode()) S.settings.decks = [...new Set([...S.settings.decks, FEHLER, HARD])];
         saveSettings();
         render();
+        toast(reviewMode() ? tr('Modo Repaso: la mayoría de las palabras de cada tanda son las que aún no sabes o te toca repasar.', 'Review mode: most words in each round are ones you do not know yet or are due to review.') : tr('Modo Estudio: la mayoría de las palabras de cada tanda son nuevas.', 'Study mode: most words in each round are new.'), 2000);
         break;
       case 'auto-speak':
         S.settings.autoSpeak = el.checked;

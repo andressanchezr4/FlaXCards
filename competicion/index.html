@@ -358,6 +358,7 @@ h1, h2, p { margin: 0; }
 .btn-primary:hover { border-color: var(--accent); filter: brightness(1.07); }
 .btn-danger { background: var(--again-bg); border-color: transparent; color: var(--again-ink); }
 .btn-danger:hover { border-color: var(--again-ink); }
+.btn-account svg { width: 18px; height: 18px; flex: none; }
 
 /* ---------- level tabs (CEFR) ---------- */
 .levels {
@@ -490,8 +491,6 @@ h1, h2, p { margin: 0; }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
 .streak-meta svg { width: 14px; height: 14px; }
-.streak-hero .streak-board-btn { justify-self: start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 0.875rem; }
-.streak-board-btn svg { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .streak-board .board-pts { display: inline-flex; align-items: center; gap: 4px; }
 .streak-board .flame { width: 16px; height: 16px; }
 /* language home: the known words take the place of the app name */
@@ -602,6 +601,7 @@ h1, h2, p { margin: 0; }
 .pg-table th:first-child { text-align: left; font-weight: 400; white-space: normal; }
 .pg-table thead th { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
 .pg-table tr.is-current th, .pg-table tr.is-current td { font-weight: 700; }
+.pg-more { min-height: 44px; }
 
 /* progress swatches and meter (deck screen) */
 .sw { display: inline-block; width: 12px; height: 8px; border-radius: 2px; flex: none; }
@@ -673,6 +673,12 @@ h1, h2, p { margin: 0; }
 .stepper output { min-width: 2.5ch; text-align: center; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .set-group { display: grid; }
 .set-group > strong { padding-bottom: 6px; }
+/* general Ajustes: each setting apart, with a line between them */
+.set-list { gap: 0; }
+.set-list > * { padding: 18px 0; }
+.set-list > * + * { border-top: 2px solid var(--line); }
+.set-list > :first-child { padding-top: 2px; }
+.set-list > :last-child { padding-bottom: 2px; }
 .check-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .check-row input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
 .field { display: grid; gap: 6px; }
@@ -1010,7 +1016,9 @@ h1, h2, p { margin: 0; }
   color: var(--paper);
   font-size: 0.9375rem;
   box-shadow: var(--shadow);
+  transition: opacity 0.6s ease;
 }
+.toast.is-out { opacity: 0; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
@@ -1187,7 +1195,7 @@ h1, h2, p { margin: 0; }
 .lang-tile { min-width: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
-.langs-top-left { display: inline-flex; align-items: center; gap: 4px; }
+.langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
