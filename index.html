@@ -1140,11 +1140,16 @@ h1, h2, p { margin: 0; }
 .quiz-opt { min-height: 56px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font-family: inherit; font-size: 1.125rem; font-weight: 700; line-height: 1.25; text-align: left; }
 .quiz-opt.is-chosen { border-color: var(--accent); background: var(--accent-soft); }
 .quiz-opt:disabled { opacity: 0.6; }
+.quiz-write { display: grid; gap: 10px; }
+.quiz-write input { min-height: 56px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); font: 700 1.25rem var(--font-body); text-align: center; }
+.quiz-write input:focus { border-color: var(--accent); outline: none; }
+.quiz-hint { text-align: center; }
 .quiz-nav { display: flex; justify-content: space-between; }
 .review { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .review li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 1.5rem; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--paper-2); }
 .review .is-bad { background: var(--again-bg); }
 .rv-a { font-weight: 700; }
+.rv-typed { display: block; font-weight: 400; font-size: 0.8125rem; color: var(--ink-2); }
 .rv-mark { text-align: center; font-weight: 700; }
 
 /* first screen outside claude.ai: account or guest */
@@ -1190,7 +1195,7 @@ h1, h2, p { margin: 0; }
 .al-text.al-3, .ex-es .al-text.al-3 { color: var(--alt-3); }
 .al-text.al-4, .ex-es .al-text.al-4 { color: var(--alt-4); }
 .al-text.al-5, .ex-es .al-text.al-5 { color: var(--alt-5); }
-.pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; }
+.pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; text-align: center; }
 .pair-demo > span { display: block; }
 
 /* two languages per row; the app language (flags) and light/dark at the top left of the languages screen */
@@ -1198,7 +1203,7 @@ h1, h2, p { margin: 0; }
 .lang-tile { min-width: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
-.langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
+.langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
@@ -1214,7 +1219,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.26';
+  const VERSION = '5.27';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3249,7 +3254,7 @@ h1, h2, p { margin: 0; }
     useLang(shown);
     return `
     <main class="screen langs has-top">
-      <div class="langs-top"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificación de rachas largas', 'Longest streaks ranking')}">${ICON.trophy}</button>${themeBtn()}<button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
+      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificación de rachas largas', 'Longest streaks ranking')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
       <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       <section class="lang-section" aria-labelledby="h-langs">
         ${streakHero(today)}
@@ -3280,7 +3285,7 @@ h1, h2, p { margin: 0; }
       <div class="start-top">
         ${decks.some(isActive) || fehlerOn() || hardOn() ? modeSwitch() + startButton(level, p) : `<p class="all-done">${tr('No hay ningún mazo marcado para estos niveles.', 'No decks are ticked for these levels.')}</p><button class="btn" type="button" data-act="lang-settings" data-focus="sec-decks">${tr('Elegir mazos en Ajustes', 'Choose decks in Settings')}</button>`}
       </div>
-      ${compValidLanguage(curLang()) ? `<button class="btn comp-entry" type="button" data-lang="${curLang()}" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('10 preguntas · se juega en tu página de FlaXCards', '10 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('10 preguntas · clasificación de la semana', '10 questions · weekly leaderboard')}</small></span></button>` : ''}
+      ${compValidLanguage(curLang()) ? `<button class="btn comp-entry" type="button" data-lang="${curLang()}" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('20 preguntas · se juega en tu página de FlaXCards', '20 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('20 preguntas · clasificación de la semana', '20 questions · weekly leaderboard')}</small></span></button>` : ''}
       ${firstUse ? `<p class="intro">${tr('Marca abajo los niveles, elige los mazos en Ajustes y pulsa «Empezar». Desliza la tarjeta a la derecha si te la sabes, a la izquierda si no, y hacia arriba para repasarla en breve.', 'Tick the levels below, choose the decks in Settings and tap ‘Start’. Swipe the card right if you know it, left if you don’t, and up to see it again shortly.')}</p>` : ''}
       ${progressStrip(today)}
       ${levelTabs(today)}
@@ -3683,8 +3688,8 @@ h1, h2, p { margin: 0; }
           </span>
         </div>
         <div class="set-group">
-          <strong>${tr('Parejas de palabras en los ejemplos', 'Word pairs in the examples')}</strong>
-          <div class="dir-switch" role="group" aria-label="${tr('Parejas de palabras en los ejemplos', 'Word pairs in the examples')}">
+          <strong>${tr('Traducción del texto', 'Translation of the text')}</strong>
+          <div class="dir-switch" role="group" aria-label="${tr('Traducción del texto', 'Translation of the text')}">
             ${[
               ['off', tr('Sin colores', 'No colours')],
               ['text', tr('Letra de color', 'Coloured letters')],
@@ -3697,12 +3702,14 @@ h1, h2, p { margin: 0; }
         </div>
         <div class="set-group">
           <strong>${tr('Orden de las tarjetas nuevas', 'Order of new cards')}</strong>
-          ${[
-            ['random', tr('Al azar', 'At random'), tr('Se sortean cada vez que empiezas.', 'Shuffled every time you start.')],
-            ['frequency', tr('Las más útiles primero', 'Most useful first'), tr('De la palabra más frecuente a la menos frecuente.', 'From the most frequent word to the least frequent.')],
-          ]
-            .map(([v, t, h]) => `<label class="check-row"><input type="radio" name="order" data-act="order" value="${v}" ${st.order === v ? 'checked' : ''}><span><b>${t}</b> · ${h}</span></label>`)
-            .join('')}
+          <div class="dir-switch" role="group" aria-label="${tr('Orden de las tarjetas nuevas', 'Order of new cards')}">
+            ${[
+              ['random', tr('Al azar', 'At random')],
+              ['frequency', tr('Útiles primero', 'Useful first')],
+            ]
+              .map(([v, t]) => `<button type="button" class="dir-opt${st.order === v ? ' is-on' : ''}" data-act="order" data-order="${v}" aria-pressed="${st.order === v}">${t}</button>`)
+              .join('')}
+          </div>
         </div>
       </section>
       ${notesPanel()}
@@ -3716,11 +3723,6 @@ h1, h2, p { margin: 0; }
         ${ui.exportText ? `<label class="field"><span>${tr('Copia de seguridad (cópiala a mano)', 'Backup (copy it by hand)')}</span><textarea id="export-text" rows="4" readonly>${esc(ui.exportText)}</textarea></label>` : ''}
         ${ui.importOpen ? `<label class="field"><span>${tr('Pega aquí tu copia de seguridad', 'Paste your backup here')}</span><textarea id="import-text" rows="5" spellcheck="false"></textarea></label><button class="btn btn-primary" type="button" data-act="import-do">${tr('Restaurar', 'Restore')}</button>` : ''}
         <button class="btn btn-danger" type="button" data-act="reset">${ui.confirmReset ? tr('Pulsa otra vez para borrar todo el progreso', 'Tap again to reset all progress') : tr('Borrar el progreso', 'Reset progress')}</button>
-      </section>
-      <section class="panel about" aria-labelledby="h-about">
-        <h2 class="eyebrow" id="h-about">${tr('Sobre FlaXCards', 'About FlaXCards')}</h2>
-        <p>${tr('FlaXCards usa el repaso espaciado del método Leitner (la caja de fichas, <i lang="de">Karteikasten</i> en alemán): cada tarjeta vuelve justo antes de que la olvides. Si fallas, vuelve en minutos; si aciertas, cada vez tarda más.', 'FlaXCards uses the spaced repetition of the Leitner system (the card box, <i lang="de">Karteikasten</i> in German): each card comes back just before you would forget it. If you get it wrong, it comes back within minutes; if you get it right, it takes longer each time.')}</p>
-        <p class="hint">${tr(`Versión ${VERSION}`, `Version ${VERSION}`)}</p>
       </section>
       ${accountGate() ? `<button class="btn btn-account" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>${tr('Cerrar sesión', 'Sign out')}</span>` : `${ICON.login}<span>${tr('Entrar o crear una cuenta', 'Sign in or create an account')}</span>`}</button>` : ''}
     </main>`;
@@ -3818,7 +3820,6 @@ h1, h2, p { margin: 0; }
       <section class="panel" aria-labelledby="h-streaks">
         <h2 class="eyebrow" id="h-streaks">${tr('Las 50 rachas más largas', 'The 50 longest streaks')}</h2>
         ${body}
-        <p class="hint">${tr(`Cuentan las cuentas de FlaXCards: días seguidos con al menos ${STREAK_MIN} tarjetas respondidas, de cualquier idioma, que llegan al servidor ese mismo día (un día salvado con un protector de racha no suma, pero no corta la racha). Solo se ve el nombre de usuario. Los invitados no aparecen: para estar en la clasificación hace falta una cuenta.`, `FlaXCards accounts count: days in a row with at least ${STREAK_MIN} cards answered, in any language, that reach the server on the day (a day saved by a streak shield adds nothing, but does not break it). Only the username is shown. Guests do not appear: being on the ranking needs an account.`)}</p>
       </section>
     </main>`;
   }
@@ -3837,8 +3838,9 @@ h1, h2, p { margin: 0; }
   // ---------------------------------------------------------------- weekly competition (Supabase)
   // Quizzes of 10 vocabulary questions. Competitive games add points to a weekly world ranking (Monday to Sunday,
   // Europe/Madrid); practice games do not. Everything that decides the result lives on the server (see the
-  // competition/ folder): the questions, which option is right, the score, the daily limit and the ranking. The
-  // app only shows the questions and sends the options chosen. The connection data come from the build
+  // competition/ folder): the questions, which answer is right, the score, the daily limit and the ranking. The
+  // app only shows the questions and sends what was written (or, in Chinese, the options chosen): a written game
+  // never gets the options. The connection data come from the build
   // (competition/config.json); without them this part says what is missing.
   const COMP_CFG = (() => {
     try {
@@ -3855,11 +3857,15 @@ h1, h2, p { margin: 0; }
   // anything else, the browser would not run it (it could read the session)
   const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js';
   const SUPABASE_JS_SRI = 'sha384-K0oxqktRvaThvYgGL4G+OK2Ih6VS6Uyu7j3+7WJgp/uWM0Yv6Xi4YEiw0BB+mPfi';
+  // hint: what a written answer must have (Chinese is multiple choice)
   const COMP_LANGUAGES = {
-    de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'] },
-    en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'] },
-    it: { name: ['Italiano', 'Italian'], prompt: ['¿Cómo se dice en italiano?', 'How do you say it in Italian?'] },
-    fr: { name: ['Francés', 'French'], prompt: ['¿Cómo se dice en francés?', 'How do you say it in French?'] },
+    de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'], hint: ['Los nombres, con su artículo (der, die, das); los verbos, en infinitivo.', 'Nouns with their article (der, die, das); verbs in the infinitive.'] },
+    en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'], hint: ['Los verbos, en infinitivo (con «to» o sin él).', 'Verbs in the infinitive (with or without “to”).'] },
+    it: { name: ['Italiano', 'Italian'], prompt: ['¿Cómo se dice en italiano?', 'How do you say it in Italian?'], hint: ['Los nombres, con su artículo (il, lo, la, l’…); los verbos, en infinitivo.', 'Nouns with their article (il, lo, la, l’…); verbs in the infinitive.'] },
+    fr: { name: ['Francés', 'French'], prompt: ['¿Cómo se dice en francés?', 'How do you say it in French?'], hint: ['Los nombres, con su artículo (le, la, l’…); los verbos, en infinitivo.', 'Nouns with their article (le, la, l’…); verbs in the infinitive.'] },
+    pt: { name: ['Portugués', 'Portuguese'], prompt: ['¿Cómo se dice en portugués?', 'How do you say it in Portuguese?'], hint: ['Los nombres, con su artículo (o, a, os, as); los verbos, en infinitivo.', 'Nouns with their article (o, a, os, as); verbs in the infinitive.'] },
+    ca: { name: ['Catalán', 'Catalan'], prompt: ['¿Cómo se dice en catalán?', 'How do you say it in Catalan?'], hint: ['Los nombres, con su artículo (el, la, l’…); los verbos, en infinitivo.', 'Nouns with their article (el, la, l’…); verbs in the infinitive.'] },
+    zh: { name: ['Chino', 'Chinese'], prompt: ['¿Cómo se dice en chino?', 'How do you say it in Chinese?'] },
   };
   const compValidLanguage = (language) => Object.hasOwn(COMP_LANGUAGES, language);
   const compPendingLanguages = new Set(); // a server may support earlier languages before a newly added one
@@ -3889,7 +3895,7 @@ h1, h2, p { margin: 0; }
     week: null, // null = this week; else a past Monday
     weeks: null,
     game: null, // the game being played (questions without the right answers)
-    answers: {}, // question id → option id
+    answers: {}, // question id → what was written (or the option id chosen)
     index: 0,
     result: null,
     busy: false,
@@ -3908,7 +3914,7 @@ h1, h2, p { margin: 0; }
     active_session: ['Tienes una partida puntuable abierta en este idioma. Continúala o abandónala.', 'You have a ranked game open in this language. Continue it or abandon it.'],
     invalid_language: ['Ese idioma no está disponible en la competición.', 'That language is not available in the competition.'],
     language_update_pending: ['La competición de este idioma está pendiente de activación. Puedes seguir compitiendo en alemán.', 'Competition in this language is awaiting activation. You can keep competing in German.'],
-    session_expired: ['Se acabaron los 10 minutos: esta partida no suma puntos.', 'The 10 minutes are up: this game does not add points.'],
+    session_expired: ['Se acabó el tiempo: esta partida no suma puntos.', 'Time is up: this game does not add points.'],
     session_closed: ['Esa partida ya está cerrada.', 'That game is already closed.'],
     session_not_found: ['No se encuentra esa partida.', 'That game cannot be found.'],
     rate_limited: ['Demasiadas partidas seguidas. Espera un rato.', 'Too many games in a row. Wait a while.'],
@@ -4009,10 +4015,17 @@ h1, h2, p { margin: 0; }
     const languageRequest = args && Object.hasOwn(args, 'p_language');
     const legacyArgs = { ...(args || {}) };
     delete legacyArgs.p_language;
+    delete legacyArgs.p_levels; // the German-only server knows neither
     if (languageRequest && compPendingLanguages.has(args.p_language)) throw new Error('language_update_pending');
     if (languageRequest && comp.multilingual === false && args.p_language !== 'de') throw new Error('language_update_pending');
     let { data, error } = await c.rpc(fn, languageRequest && comp.multilingual === false ? legacyArgs : args || {});
     checkAccount();
+    if (error?.code === 'PGRST202' && args && Object.hasOwn(args, 'p_levels') && comp.multilingual !== false) {
+      // a server without the levels yet: the same request without them
+      const { p_levels, ...withoutLevels } = args;
+      ({ data, error } = await c.rpc(fn, withoutLevels));
+      checkAccount();
+    }
     if (languageRequest && error?.code === 'PGRST202') {
       comp.multilingual = false;
       // A missing signature means the request was never executed. Retry German only:
@@ -4240,11 +4253,28 @@ h1, h2, p { margin: 0; }
     const firstOpen = game.questions.findIndex((q) => !comp.answers[q.question_id]);
     comp.index = firstOpen < 0 ? game.questions.length - 1 : firstOpen;
     go('quiz');
+    focusAnswer();
     clearInterval(comp.tick);
     comp.tick = setInterval(quizTick, 1000);
   }
+  // the box to write the answer in, ready to type (with the cursor at the end)
+  function focusAnswer() {
+    const el = document.getElementById('quiz-answer');
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }
+  // to another question of the game (what is being written is kept)
+  function quizGo(index) {
+    comp.index = index;
+    render();
+    focusAnswer();
+  }
+  // the levels ticked in the app for the language of the competition (on its own page: all of them)
+  const compLevels = () => (!COMP_ALONE && comp.language === curLang() ? curLevels() : null);
   async function compPlay(mode) {
-    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode, p_language: comp.language })));
+    const levels = compLevels();
+    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode, p_language: comp.language, ...(levels ? { p_levels: levels } : {}) })));
   }
   async function compResume(id) {
     await compStep(async () => beginGame(await rpc('quiz_resume', { p_session: id })));
@@ -4267,16 +4297,24 @@ h1, h2, p { margin: 0; }
     const q = comp.game.questions[comp.index];
     comp.answers[q.question_id] = Number(optionId);
     saveAnswers();
-    if (comp.index < comp.game.questions.length - 1) {
-      comp.index += 1;
-      render();
-    } else compFinish();
+    if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1);
+    else compFinish();
+  }
+  // a written answer, sent with "Siguiente" (or Enter): on to the next question, or the end
+  function compWrite(text) {
+    const q = comp.game.questions[comp.index];
+    comp.answers[q.question_id] = String(text || '').trim().slice(0, 100);
+    saveAnswers();
+    if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1);
+    else compFinish();
   }
   async function compFinish() {
     const game = comp.game;
     if (!game) return;
     clearInterval(comp.tick);
-    const answers = game.questions.map((q) => ({ question_id: q.question_id, option_id: comp.answers[q.question_id] || null }));
+    const answers = game.questions.map((q) =>
+      game.typed ? { question_id: q.question_id, text: String(comp.answers[q.question_id] || '').trim() || null } : { question_id: q.question_id, option_id: comp.answers[q.question_id] || null },
+    );
     await compStep(async () => {
       try {
         const result = await rpc('quiz_finish', { p_session: game.session_id, p_answers: answers });
@@ -4340,7 +4378,9 @@ h1, h2, p { margin: 0; }
   }
   const compError = () => (comp.error ? `<p class="comp-error" role="alert">${esc(comp.error)}</p>` : '');
   const compLanguageName = (language = comp.language) => tr(...COMP_LANGUAGES[compValidLanguage(language) ? language : 'de'].name);
+  // on its own page the competition has a language picker; inside the app it is the language it was opened from
   function compLanguageSelector() {
+    if (!COMP_ALONE) return '';
     return `<section class="panel comp-language-picker" aria-label="${tr('Idioma de la competición', 'Competition language')}">
       <div class="comp-languages" role="group" aria-label="${tr('Idioma', 'Language')}">
         ${Object.keys(COMP_LANGUAGES).map((language) => `<button class="btn comp-language" type="button" data-act="comp-language" data-lang="${language}" aria-pressed="${language === comp.language}" ${comp.busy ? 'disabled' : ''}>${compLanguageName(language)}</button>`).join('')}
@@ -4349,25 +4389,37 @@ h1, h2, p { margin: 0; }
     </section>`;
   }
 
+  // the rules of a game as the server gives them: written or with options, questions, minutes and points
+  function compRulesText(r = {}) {
+    const n = r.questions || 20;
+    const min = r.minutes || 20;
+    const max = r.max_score || 200;
+    const right = r.right || 10;
+    const wrong = String(r.wrong ?? -5).replace('-', '−');
+    return r.typed
+      ? tr(`Cada partida: ${n} palabras que escribes tú, en ${min} minutos. Acierto +${right}, fallo 0 (de 0 a ${max} puntos). Valen sin acentos ni mayúsculas y con una errata en las palabras largas, pero el artículo tiene que ser el correcto.`, `Each game: ${n} words you write, in ${min} minutes. Right +${right}, wrong 0 (0 to ${max} points). They count without accents or capitals and with one typo in long words, but the article must be right.`)
+      : tr(`Cada partida: ${n} preguntas y ${min} minutos. Acierto +${right}, fallo o sin responder ${wrong} (de 0 a ${max} puntos).`, `Each game: ${n} questions in ${min} minutes. Right +${right}, wrong or unanswered ${wrong} (0 to ${max} points).`);
+  }
+  const compTitle = () => (COMP_ALONE ? tr('Competición semanal', 'Weekly competition') : tr(`Competición de ${compLanguageName().toLowerCase()}`, `${compLanguageName()} competition`));
   function viewCompete() {
     if (!COMP_ON) {
-      return `${compTop(tr('Competición semanal', 'Weekly competition'))}
+      return `${compTop(compTitle())}
       <main class="screen">${compLanguageSelector()}<section class="panel">
         <h2 class="eyebrow">${tr('Aún no está conectada', 'Not connected yet')}</h2>
         <p>${tr('La competición necesita un servidor propio (un proyecto gratuito de Supabase) que todavía no se ha configurado en esta copia de FlaXCards.', 'The competition needs its own server (a free Supabase project), which has not been set up yet in this copy of FlaXCards.')}</p>
         <p class="hint">${tr('Quien mantiene la app debe crear el proyecto, aplicar <code>competition/supabase/migrations</code>, cargar las preguntas y poner la dirección y la clave pública en <code>competition/config.json</code> antes de generar la app. Todo está explicado en <code>competition/README.md</code>.', 'Whoever maintains the app must create the project, apply <code>competition/supabase/migrations</code>, load the questions and put the address and the public key in <code>competition/config.json</code> before building the app. It is all explained in <code>competition/README.md</code>.')}</p>
       </section></main>`;
     }
-    if (!comp.ready) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compLanguageSelector()}<p class="comp-wait">${tr('Conectando…', 'Connecting…')}</p>${compError()}</main>`;
-    if (!comp.user) return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">${compLanguageSelector()}${compAuthForm()}</main>`;
+    if (!comp.ready) return `${compTop(compTitle())}<main class="screen">${compLanguageSelector()}<p class="comp-wait">${tr('Conectando…', 'Connecting…')}</p>${compError()}</main>`;
+    if (!comp.user) return `${compTop(compTitle())}<main class="screen">${compLanguageSelector()}${compAuthForm()}</main>`;
     if ((comp.multilingual === false && comp.language !== 'de') || compPendingLanguages.has(comp.language)) {
-      return `${compTop(tr('Competición semanal', 'Weekly competition'))}<main class="screen">
+      return `${compTop(compTitle())}<main class="screen">
         ${compLanguageSelector()}
         <section class="panel comp-pending" role="status">
           <h2 class="eyebrow">${compLanguageName()}</h2>
-          <p>${tr(...COMP_ERRORS.language_update_pending)}</p>
+          <p>${COMP_ALONE ? tr(...COMP_ERRORS.language_update_pending) : tr('La competición de este idioma está pendiente de activación.', 'Competition in this language is awaiting activation.')}</p>
           <div class="btn-stack">
-            <button class="btn btn-primary" type="button" data-act="comp-language" data-lang="de">${tr('Ir a la competición de alemán', 'Go to German competition')}</button>
+            ${COMP_ALONE ? `<button class="btn btn-primary" type="button" data-act="comp-language" data-lang="de">${tr('Ir a la competición de alemán', 'Go to German competition')}</button>` : ''}
             <button class="btn" type="button" data-act="comp-refresh" ${comp.busy ? 'disabled' : ''}>${tr('Comprobar disponibilidad', 'Check availability')}</button>
           </div>
         </section>
@@ -4384,12 +4436,12 @@ h1, h2, p { margin: 0; }
     const playBlock = current
       ? `<div class="btn-stack">
           ${active ? `<button class="btn btn-primary" type="button" data-act="comp-resume" data-id="${esc(active.session_id)}">${tr('Continuar la partida puntuable', 'Continue the ranked game')}</button><button class="btn" type="button" data-act="comp-abandon-open" data-id="${esc(active.session_id)}">${tr('Abandonarla (no suma puntos)', 'Abandon it (no points)')}</button>` : ''}
-          ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr(`Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 5} hoy)</small>`, `Play a ranked game <small>(${left} of ${st.rules ? st.rules.daily_limit : 5} today)</small>`)}</button>` : ''}
+          ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr(`Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 3} hoy)</small>`, `Play a ranked game <small>(${left} of ${st.rules ? st.rules.daily_limit : 3} today)</small>`)}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${left > 0 ? tr(`Cada partida: 10 preguntas y 10 minutos. Acierto +10, fallo o sin responder −5 (de 0 a 100 puntos). Puedes jugar ${st.rules ? st.rules.daily_limit : 5} partidas puntuables al día; empezar una ya la gasta.`, `Each game: 10 questions in 10 minutes. Right +10, wrong or unanswered −5 (0 to 100 points). You can play ${st.rules ? st.rules.daily_limit : 5} ranked games a day; starting one uses it up.`) : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
+        <p class="hint">${left > 0 ? `${compRulesText(st.rules)} ${tr(`Puedes jugar ${st.rules ? st.rules.daily_limit : 3} partidas puntuables al día y para la clasificación cuenta la mejor de cada día; empezar una ya la gasta.`, `You can play ${st.rules ? st.rules.daily_limit : 3} ranked games a day and the leaderboard counts the best one of each day; starting one uses it up.`)}` : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
       : '';
-    return `${compTop(tr('Competición semanal', 'Weekly competition'))}
+    return `${compTop(compTitle())}
     <main class="screen">
       ${compLanguageSelector()}
       ${compError()}
@@ -4428,7 +4480,7 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 10 preguntas de vocabulario del idioma elegido por partida.', ' Each game has 10 vocabulary questions in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 20 palabras del idioma elegido por partida.', ' Each game has 20 words in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
@@ -4452,23 +4504,33 @@ h1, h2, p { margin: 0; }
     const chosen = comp.answers[q.question_id];
     const counted = g.counted;
     const language = compValidLanguage(g.language) ? g.language : comp.language;
+    const last = comp.index === g.questions.length - 1;
+    const hint = COMP_LANGUAGES[language].hint;
+    // written: a box and "Siguiente" (Enter sends it too); Chinese: the four options
+    const answerBlock = g.typed
+      ? `<form class="quiz-write" data-form="comp-write">
+          <input id="quiz-answer" name="answer" lang="${language}" value="${esc(chosen || '')}" maxlength="100" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="${last ? 'done' : 'next'}" aria-label="${tr('Tu respuesta', 'Your answer')}" placeholder="${tr('Escribe la palabra', 'Write the word')}" ${comp.busy ? 'disabled' : ''}>
+          <button class="btn btn-primary" type="submit" ${comp.busy ? 'disabled' : ''}>${last ? tr('Terminar', 'Finish') : tr('Siguiente', 'Next')}</button>
+        </form>
+        ${hint ? `<p class="hint quiz-hint">${tr(...hint)}</p>` : ''}`
+      : `<div class="quiz-options">
+          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="${language}" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
+        </div>`;
     return `<div class="quiz">
       <header class="study-bar">
         <button class="icon-btn" type="button" data-act="comp-abandon-open" data-id="${esc(g.session_id)}" aria-label="${tr('Abandonar la partida', 'Abandon the game')}">${ICON.close}</button>
         <span class="comp-badge ${counted ? 'is-counted' : 'is-practice'}">${counted ? tr('Puntuable', 'Ranked') : tr('Práctica · no suma', 'Practice · no points')}</span>
         <span class="quiz-meta"><span>${comp.index + 1} / ${g.questions.length}</span><span id="quiz-timer" class="quiz-timer">${fmtClock(quizSecondsLeft())}</span></span>
       </header>
-      ${progressBar(g.questions.filter((x) => comp.answers[x.question_id] != null).length, g.questions.length, tr('preguntas respondidas', 'questions answered'))}
+      ${progressBar(g.questions.filter((x) => !!comp.answers[x.question_id]).length, g.questions.length, tr('preguntas respondidas', 'questions answered'))}
       ${compError()}
       <main class="quiz-body">
         <p class="eyebrow">${tr(...COMP_LANGUAGES[language].prompt)}</p>
         <h2 class="quiz-q" lang="es">${esc(q.statement)}</h2>
-        <div class="quiz-options">
-          ${q.options.map((o) => `<button class="quiz-opt${Number(chosen) === Number(o.id) ? ' is-chosen' : ''}" type="button" data-act="comp-option" data-id="${o.id}" lang="${language}" ${comp.busy ? 'disabled' : ''}>${esc(o.text)}</button>`).join('')}
-        </div>
+        ${answerBlock}
         <div class="quiz-nav">
           <button class="link-btn" type="button" data-act="comp-prev" ${comp.index === 0 ? 'disabled' : ''}>‹ ${tr('Anterior', 'Previous')}</button>
-          <button class="link-btn" type="button" data-act="comp-skip">${comp.index < g.questions.length - 1 ? tr('Saltar ›', 'Skip ›') : tr('Terminar', 'Finish')}</button>
+          ${g.typed && last ? '<span></span>' : `<button class="link-btn" type="button" data-act="comp-skip">${last ? tr('Terminar', 'Finish') : tr('Saltar ›', 'Skip ›')}</button>`}
         </div>
       </main>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
@@ -4479,8 +4541,13 @@ h1, h2, p { margin: 0; }
     const r = comp.result;
     if (!r) return viewCompete();
     const language = compValidLanguage(r.language) ? r.language : comp.language;
+    // the right answer as it is written and, under it, what was written when it was not exactly that
     const items = (r.review || [])
-      .map((x) => `<li class="${x.is_correct ? 'is-ok' : 'is-bad'}"><span class="rv-q" lang="es">${esc(x.statement)}</span><span class="rv-a" lang="${language}">${esc(x.correct_text)}</span><span class="rv-mark">${x.is_correct ? '✓' : x.selected_option_id ? '✗' : '—'}</span></li>`)
+      .map((x) => {
+        const answered = r.typed ? !!x.typed_text : !!x.selected_option_id;
+        const mine = r.typed && x.typed_text && x.typed_text !== x.correct_text ? `<small class="rv-typed">${tr('Tu respuesta:', 'Your answer:')} <span lang="${language}">${esc(x.typed_text)}</span></small>` : '';
+        return `<li class="${x.is_correct ? 'is-ok' : 'is-bad'}"><span class="rv-q" lang="es">${esc(x.statement)}</span><span class="rv-a"><span lang="${language}">${esc(x.correct_text)}</span>${mine}</span><span class="rv-mark">${x.is_correct ? '✓' : answered ? '✗' : '—'}</span></li>`;
+      })
       .join('');
     return `${compTop(tr('Resultado', 'Result'), 'compete')}
     <main class="screen">
@@ -4541,14 +4608,11 @@ h1, h2, p { margin: 0; }
         compChoose(el.dataset.id);
         return true;
       case 'comp-prev':
-        comp.index = Math.max(0, comp.index - 1);
-        render();
+        quizGo(Math.max(0, comp.index - 1));
         return true;
       case 'comp-skip':
-        if (comp.index < comp.game.questions.length - 1) {
-          comp.index += 1;
-          render();
-        } else compFinish();
+        if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1);
+        else compFinish();
         return true;
       case 'comp-abandon-open':
         if (!comp.game && el.dataset.id) comp.game = { session_id: el.dataset.id, counted: true, questions: [] };
@@ -4584,10 +4648,20 @@ h1, h2, p { margin: 0; }
         return false;
     }
   }
+  // what is being written is kept as it is typed (going to another question does not lose it)
+  app.addEventListener('input', (e) => {
+    if (e.target.id !== 'quiz-answer' || !comp.game) return;
+    comp.answers[comp.game.questions[comp.index].question_id] = e.target.value.slice(0, 100);
+    saveAnswers();
+  });
   app.addEventListener('submit', (e) => {
     const form = e.target.closest('form[data-form]');
     if (!form) return;
     e.preventDefault();
+    if (form.dataset.form === 'comp-write') {
+      if (comp.game && !comp.busy) compWrite(form.elements.answer.value);
+      return;
+    }
     if (form.dataset.form === 'comp-auth') {
       compStep(async () => {
         await compAuth(form);
@@ -5069,8 +5143,9 @@ h1, h2, p { margin: 0; }
         render();
         break;
       case 'order':
-        S.settings.order = el.value;
+        S.settings.order = el.dataset.order === 'frequency' ? 'frequency' : 'random';
         saveSettings();
+        render();
         break;
       case 'mode':
         // review mode ticks "Überprüfen" and "Schwierige Wörter"
@@ -5078,7 +5153,7 @@ h1, h2, p { margin: 0; }
         if (reviewMode()) S.settings.decks = [...new Set([...S.settings.decks, FEHLER, HARD])];
         saveSettings();
         render();
-        toast(reviewMode() ? tr('Modo Repaso: la mayoría de las palabras de cada tanda son las que aún no sabes o te toca repasar.', 'Review mode: most words in each round are ones you do not know yet or are due to review.') : tr('Modo Estudio: la mayoría de las palabras de cada tanda son nuevas.', 'Study mode: most words in each round are new.'), 2000);
+        toast(reviewMode() ? tr('Modo Repaso: la mayoría de las palabras de cada tanda son las que aún no sabes o te toca repasar.', 'Review mode: most words in each round are ones you do not know yet or are due to review.') : tr('Modo Estudio: la mayoría de las palabras de cada tanda son nuevas.', 'Study mode: most words in each round are new.'), 3000);
         break;
       case 'auto-speak':
         S.settings.autoSpeak = el.checked;
