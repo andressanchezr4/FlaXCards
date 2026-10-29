@@ -362,6 +362,30 @@ h1, h2, p { margin: 0; }
 .btn-danger { background: var(--again-bg); border-color: transparent; color: var(--again-ink); }
 .btn-danger:hover { border-color: var(--again-ink); }
 .btn-account svg { width: 18px; height: 18px; flex: none; }
+.account-delete-open { justify-self: center; }
+/* a part only for accounts, as a guest sees it: dimmed, and a note on top that stays */
+.is-locked { position: relative; }
+.is-locked > :not(.locked-note) { opacity: 0.35; filter: grayscale(1); }
+.locked-note {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.locked-note::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
+.comp-entry.is-locked:disabled { opacity: 1; cursor: default; }
+.guest-note { text-align: center; }
 
 /* ---------- level tabs (CEFR) ---------- */
 .levels {
@@ -501,6 +525,7 @@ h1, h2, p { margin: 0; }
 .levels-sm .level { padding: 6px 2px; }
 .levels-sm .level-name { font-size: 1.05rem; }
 .board-name small { display: block; font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
+.board-gap { text-align: center; color: var(--muted); line-height: 1; }
 /* language home: the known words take the place of the app name */
 .home-top { gap: 6px; }
 .home-top .hero { flex: 1; min-width: 0; padding: 0; gap: 10px; }
@@ -1154,13 +1179,16 @@ h1, h2, p { margin: 0; }
 /* the answer of a competition question: the screen goes green, or red while the question shakes; from the edges to
    solid, then it fades as the next question comes */
 .quiz-flash { --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
-.quiz-flash.is-wrong { --flash: #e03131; animation-duration: 1.04s; }
+.quiz-flash.is-wrong { --flash: #e03131; animation-name: quiz-flash-long; animation-duration: 2.9s; }
 .quiz-flash::before, .quiz-flash::after { content: ''; position: absolute; inset: 0; }
 .quiz-flash::before { background: radial-gradient(circle at 50% 45%, transparent 0, var(--flash) 78%); }
 .quiz-flash::after { background: var(--flash); opacity: 0; animation: quiz-flash-solid 0.9s ease-out forwards; }
-.quiz-flash.is-wrong::after { animation-duration: 1.04s; }
+.quiz-flash.is-wrong::after { animation-name: quiz-flash-solid-long; animation-duration: 2.9s; }
 @keyframes quiz-flash { 0% { opacity: 0; } 20% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes quiz-flash-solid { 0%, 15% { opacity: 0; } 42%, 100% { opacity: 1; } }
+/* wrong: solid by 0.45 s, held until 2.45 s (the right answer for 2 s), then it fades */
+@keyframes quiz-flash-long { 0% { opacity: 0; } 8% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes quiz-flash-solid-long { 0%, 5% { opacity: 0; } 15%, 100% { opacity: 1; } }
 .quiz-flash-mark {
   position: absolute;
   z-index: 1; /* over the solid colour */
@@ -1175,16 +1203,30 @@ h1, h2, p { margin: 0; }
   background: #fff;
   color: var(--flash);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
-  animation: quiz-mark-pop 0.9s ease-out forwards;
+  animation: quiz-mark-pop 0.45s ease-out forwards;
 }
-.quiz-flash.is-wrong .quiz-flash-mark { animation-duration: 1.04s; }
 .quiz-flash-icon { display: grid; }
+/* when wrong, the right answer under the cross, for 2 seconds */
+.quiz-flash-word {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  right: 16px;
+  top: calc(45% + 84px);
+  text-align: center;
+  color: #fff;
+  font: 700 2rem/1.2 var(--font-display);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  animation: quiz-word-in 0.3s ease-out 0.35s forwards;
+}
+@keyframes quiz-word-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .quiz-flash-icon svg { width: 72px; height: 72px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .quiz-flash.is-wrong .quiz-flash-icon { animation: quiz-shake 0.45s ease-in-out 0.12s; }
 @keyframes quiz-mark-pop {
   0% { transform: scale(0.4); opacity: 0; }
-  22% { transform: scale(1.1); opacity: 1; }
-  34% { transform: scale(1); }
+  60% { transform: scale(1.1); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 .quiz-body.is-shaking { animation: quiz-shake 0.45s ease-in-out; }
@@ -1198,6 +1240,7 @@ h1, h2, p { margin: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .quiz-flash { opacity: 0.5; } /* no movement: a still colour for a moment */
+  .quiz-flash-word { opacity: 1; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .quiz-nav { display: flex; justify-content: space-between; }
@@ -1275,7 +1318,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.29';
+  const VERSION = '5.30';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -1560,12 +1603,41 @@ h1, h2, p { margin: 0; }
       /* no local storage: start fresh */
     }
   }
+  // a guest (the public app, without an account): what is studied lives only while the app is open and nothing of
+  // it is saved; the copy of an account kept in this browser stays as it is, for when it signs in again. Only the
+  // app's language and the light/dark mode are kept
+  const isGuest = () => accountGate() && !hasSession();
   function saveLocal() {
     try {
+      if (isGuest()) {
+        const kept = JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || { v: 1, cards: {}, settings: {}, log: {}, notes: {} };
+        kept.settings = { ...(kept.settings || {}), uiLang: S.settings.uiLang, theme: S.settings.theme };
+        localStorage.setItem(STORE_KEY, JSON.stringify(kept));
+        return;
+      }
       localStorage.setItem(STORE_KEY, JSON.stringify({ v: 1, cards: S.cards, settings: S.settings, log: S.log, notes: S.notes }));
     } catch (e) {
       /* storage full or blocked */
     }
+  }
+  // a fresh start, keeping the app's language and light/dark (a guest, or an account that signs in after one)
+  function freshState() {
+    S = { cards: {}, settings: withDefaults({ uiLang: S.settings.uiLang, theme: S.settings.theme }), log: {}, notes: {} };
+  }
+  function enterGuest() {
+    freshState();
+    ui.guest = true;
+    ui.guestWarn = false;
+    useLang(S.settings.lang);
+    go('langs');
+  }
+  // signing in after being a guest: this browser's copy of the account comes back; what the guest did is dropped
+  function leaveGuest() {
+    if (!ui.guest) return;
+    ui.guest = false;
+    freshState();
+    loadLocal();
+    useLang(S.settings.lang);
   }
   // progress of a deck is saved in one document, or in several ("p-<deck>~<n>") for very big decks
   function shardKey(d, cardId) {
@@ -2351,11 +2423,13 @@ h1, h2, p { margin: 0; }
 
     // ---- what changed
     card(id) {
+      if (isGuest()) return;
       if (!this.claudeHost()) return this.mark('c:' + id);
       const u = unitOf(id);
       if (u) this.mark(shardKey(u.d, id));
     },
     mark(key) {
+      if (isGuest()) return;
       if (!this.claudeHost()) {
         if (key === 'settings') key = 's';
         if (this.busy && this.dirty.has(key)) this.again.add(key);
@@ -2796,7 +2870,7 @@ h1, h2, p { margin: 0; }
           : tr('No se pudo guardar en tu cuenta; de momento el progreso se guarda en este navegador.', 'Could not save to your account; for now your progress is saved in this browser.');
       default:
         return account && accountGate() && !hasSession()
-          ? tr('Tu progreso se guarda solo en este navegador. Entra con tu cuenta para guardarlo también en la nube.', 'Your progress is saved only in this browser. Sign in to keep it in the cloud too.')
+          ? tr('Como invitado, tu progreso no se guarda: se pierde al cerrar la app.', 'As a guest, your progress is not saved: it is lost when you close the app.')
           : tr('Tu progreso se guarda en este navegador.', 'Your progress is saved in this browser.');
     }
   }
@@ -3270,20 +3344,24 @@ h1, h2, p { margin: 0; }
 
   // the streak (all languages together), big on the languages screen: the flame is grey until today counts for
   // the streak (STREAK_MIN cards answered) and red after it
+  // a part only for accounts, as a guest sees it: dimmed, with this note on top
+  const lockedNote = () => `<span class="locked-note">${tr('Disponible solo para usuarios con cuenta', 'Available only to users with an account')}</span>`;
   function streakHero(today) {
-    const streak = streakDays(today);
-    const best = Math.max(streak, bestStreak());
+    const locked = isGuest(); // a guest has no streak: 0
+    const streak = locked ? 0 : streakDays(today);
+    const best = locked ? 0 : Math.max(streak, bestStreak());
     const goal = STREAK_MIN;
-    const doneToday = logPeek(today).r || 0;
-    const met = studiedDay(today);
-    const shields = S.settings.shields;
-    return `<section class="streak-hero${met ? ' is-met' : ''}" aria-label="${tr(`Racha de ${streak} días; hoy ${met ? 'práctica completada' : `${doneToday} de ${goal} tarjetas`}`, `${streak}-day streak; today ${met ? 'practice done' : `${doneToday} of ${goal} cards`}`)}">
+    const doneToday = locked ? 0 : logPeek(today).r || 0;
+    const met = !locked && studiedDay(today);
+    const shields = locked ? 0 : S.settings.shields;
+    return `<section class="streak-hero${met ? ' is-met' : ''}${locked ? ' is-locked' : ''}" aria-label="${tr(`Racha de ${streak} días; hoy ${met ? 'práctica completada' : `${doneToday} de ${goal} tarjetas`}`, `${streak}-day streak; today ${met ? 'practice done' : `${doneToday} of ${goal} cards`}`)}">
       <span class="streak-flame">${ICON.flame}</span>
       <span class="streak-body">
         <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')} <span class="streak-best">${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span></span>
         <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector: ese día no suma, pero no pierdes la racha; sin protectores, vuelve a 0. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up: that day adds nothing, but you keep your streak; with no shields, it goes back to 0. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
       </span>
+      ${locked ? lockedNote() : ''}
     </section>`;
   }
 
@@ -3341,7 +3419,7 @@ h1, h2, p { margin: 0; }
       <div class="start-top">
         ${decks.some(isActive) || fehlerOn() || hardOn() ? modeSwitch() + startButton(level, p) : `<p class="all-done">${tr('No hay ningún mazo marcado para estos niveles.', 'No decks are ticked for these levels.')}</p><button class="btn" type="button" data-act="lang-settings" data-focus="sec-decks">${tr('Elegir mazos en Ajustes', 'Choose decks in Settings')}</button>`}
       </div>
-      ${compValidLanguage(curLang()) ? `<button class="btn comp-entry" type="button" data-lang="${curLang()}" data-act="${compLinksOut() ? 'comp-link' : 'compete'}">${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('20 preguntas · se juega en tu página de FlaXCards', '20 questions · played on your FlaXCards page') : accountGate() && !hasSession() ? tr('Entra o crea una cuenta para competir', 'Sign in or create an account to compete') : tr('20 preguntas · clasificación de la semana', '20 questions · weekly leaderboard')}</small></span></button>` : ''}
+      ${compValidLanguage(curLang()) ? `<button class="btn comp-entry${isGuest() ? ' is-locked' : ''}" type="button" data-lang="${curLang()}" data-act="${compLinksOut() ? 'comp-link' : 'compete'}"${isGuest() ? ' disabled' : ''}>${ICON.medal}<span>${tr('Competición semanal', 'Weekly competition')}<small>${compLinksOut() ? tr('20 preguntas · se juega en tu página de FlaXCards', '20 questions · played on your FlaXCards page') : tr('20 preguntas · clasificación de la semana', '20 questions · weekly leaderboard')}</small></span>${isGuest() ? lockedNote() : ''}</button>` : ''}
       ${firstUse ? `<p class="intro">${tr('Marca abajo los niveles, elige los mazos en Ajustes y pulsa «Empezar». Desliza la tarjeta a la derecha si te la sabes, a la izquierda si no, y hacia arriba para repasarla en breve.', 'Tick the levels below, choose the decks in Settings and tap ‘Start’. Swipe the card right if you know it, left if you don’t, and up to see it again shortly.')}</p>` : ''}
       ${progressStrip(today)}
       ${levelTabs(today)}
@@ -3769,7 +3847,7 @@ h1, h2, p { margin: 0; }
         </div>
       </section>
       ${notesPanel()}
-      <section class="panel" aria-labelledby="h-data">
+      ${isGuest() ? `<p class="hint guest-note">${esc(syncLabel())}</p>` : `<section class="panel" aria-labelledby="h-data">
         <h2 class="eyebrow" id="h-data">${tr('Copia de seguridad', 'Backup')}</h2>
         <p class="hint sync-label">${esc(syncLabel())}</p>
         <div class="btn-stack">
@@ -3779,9 +3857,28 @@ h1, h2, p { margin: 0; }
         ${ui.exportText ? `<label class="field"><span>${tr('Copia de seguridad (cópiala a mano)', 'Backup (copy it by hand)')}</span><textarea id="export-text" rows="4" readonly>${esc(ui.exportText)}</textarea></label>` : ''}
         ${ui.importOpen ? `<label class="field"><span>${tr('Pega aquí tu copia de seguridad', 'Paste your backup here')}</span><textarea id="import-text" rows="5" spellcheck="false"></textarea></label><button class="btn btn-primary" type="button" data-act="import-do">${tr('Restaurar', 'Restore')}</button>` : ''}
         <button class="btn btn-danger" type="button" data-act="reset">${ui.confirmReset ? tr('Pulsa otra vez para borrar todo el progreso', 'Tap again to reset all progress') : tr('Borrar el progreso', 'Reset progress')}</button>
-      </section>
+      </section>`}
+      ${accountGate() && hasSession() ? deleteAccountBlock() : ''}
       ${accountGate() ? `<button class="btn btn-account" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>${tr('Cerrar sesión', 'Sign out')}</span>` : `${ICON.login}<span>${tr('Entrar o crear una cuenta', 'Sign in or create an account')}</span>`}</button>` : ''}
     </main>`;
+  }
+
+  // deleting the account, from Ajustes: «¿Estás seguro?» (yes or cancel), then writing «estoy seguro»
+  const DELETE_WORDS = ['estoy seguro', 'i am sure'];
+  const deleteWordsOk = (v) => DELETE_WORDS.includes(String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim());
+  function deleteAccountBlock() {
+    const what = tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.');
+    const cancel = `<button class="btn" type="button" data-act="account-delete-no">${tr('Cancelar', 'Cancel')}</button>`;
+    if (ui.deleteStep === 'ask') {
+      return `<div class="comp-delete" role="alert"><p><strong>${tr('¿Estás seguro de que quieres borrar tu cuenta?', 'Are you sure you want to delete your account?')}</strong> ${what}</p>
+        <div class="btn-row"><button class="btn btn-danger" type="button" data-act="account-delete-yes">${tr('Sí, borrarla', 'Yes, delete it')}</button>${cancel}</div></div>`;
+    }
+    if (ui.deleteStep === 'type') {
+      return `<div class="comp-delete" role="alert"><label class="field"><span>${tr('Para confirmarlo, escribe <b>«estoy seguro»</b>', 'To confirm it, write <b>“I am sure”</b>')}</span>
+        <input id="delete-confirm" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+        <div class="btn-row"><button class="btn btn-danger" type="button" data-act="account-delete" disabled>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button>${cancel}</div></div>`;
+    }
+    return `<button class="link-btn account-delete-open" type="button" data-act="account-delete-ask">${tr('Borrar mi cuenta', 'Delete my account')}</button>`;
   }
 
   // the Ajustes of the language being studied (the gear inside it): card direction, decks, voice, and its decks
@@ -3866,11 +3963,20 @@ h1, h2, p { margin: 0; }
     const tab = ui.boardTab === 'accuracy' ? 'accuracy' : 'streaks';
     const b = ui.board && ui.board.tab === tab ? ui.board : { loading: true };
     const row = (r, pts, meta = '') => `<li class="board-row${r.is_me ? ' is-me' : ''}"><span class="board-rank">${r.rank}</span><span class="board-name">${esc(r.username)}${meta}</span><span class="board-pts">${pts}</span></li>`;
-    const rows = (b.rows || [])
-      .map((r) => tab === 'streaks'
-        ? row(r, `${ICON.flame}${fmtInt(r.days)} ${r.days === 1 ? tr('día', 'day') : tr('días', 'days')}`)
-        : row(r, fmtNum(Number(r.score)), `<small>${fmtNum(Number(r.accuracy))} % · ${tr(`${r.days} de 7 días`, `${r.days} of 7 days`)}</small>`))
-      .join('');
+    const shown = (r) => tab === 'streaks'
+      ? row(r, `${ICON.flame}${fmtInt(r.days)} ${r.days === 1 ? tr('día', 'day') : tr('días', 'days')}`)
+      : row(r, fmtNum(Number(r.score)), `<small>${fmtNum(Number(r.accuracy))} % · ${tr(`${r.days} de 7 días`, `${r.days} of 7 days`)}</small>`);
+    // the first 50, and the player's own row when it comes further down
+    const all = b.rows || [];
+    const rows = all.slice(0, 50).map(shown).join('') + (all.length > 50 ? `<li class="board-gap" aria-hidden="true">…</li>${all.slice(50).map(shown).join('')}` : '');
+    const me = all.find((r) => r.is_me);
+    const mine = tab !== 'accuracy' || b.loading || b.error
+      ? ''
+      : me
+        ? `<p class="board-me">${tr(`Tu posición: ${me.rank}.º${me.players ? ` de ${fmtInt(me.players)}` : ''}`, `Your position: ${me.rank}${me.players ? ` of ${fmtInt(me.players)}` : ''}`)}</p>`
+        : accountGate() && hasSession()
+          ? `<p class="hint">${tr('Todavía no tienes partidas puntuables aquí esta semana.', 'You have no ranked games here this week yet.')}</p>`
+          : '';
     const empty = tab === 'streaks'
       ? tr('Todavía no hay rachas. ¡Estudia hoy y sé el primero!', 'No streaks yet. Study today and be the first!')
       : tr('Nadie ha jugado aquí partidas puntuables esta semana.', 'Nobody has played ranked games here this week.');
@@ -3879,8 +3985,8 @@ h1, h2, p { margin: 0; }
       : b.error
         ? `<p class="hint">${tr('No se ha podido cargar la clasificación. Comprueba la conexión y vuelve a intentarlo.', 'The ranking could not be loaded. Check your connection and try again.')}</p><button class="btn" type="button" data-act="board-tab" data-tab="${tab}">${tr('Reintentar', 'Try again')}</button>`
         : rows
-          ? `<ol class="board${tab === 'streaks' ? ' streak-board' : ' accuracy-board'}">${rows}</ol>`
-          : `<p class="hint">${empty}</p>`;
+          ? `<ol class="board${tab === 'streaks' ? ' streak-board' : ' accuracy-board'}">${rows}</ol>${mine}`
+          : `<p class="hint">${empty}</p>${mine}`;
     // % of right answers: all languages or one, and then (optionally) some of its levels
     const filters = tab === 'accuracy'
       ? `<div class="acc-filters">
@@ -4426,9 +4532,11 @@ h1, h2, p { margin: 0; }
       b.classList.toggle('is-chosen', Number(b.dataset.id) === Number(args.p_option));
     });
     let right = null;
+    let answer = '';
     try {
       const r = await rpc('quiz_answer', { p_session: game.session_id, p_question: q.question_id, p_text: null, p_option: null, ...args });
       right = !!(r && r.is_correct);
+      answer = (r && r.correct_text) || '';
     } catch (e) {
       /* sent with the rest at the end */
     }
@@ -4436,20 +4544,27 @@ h1, h2, p { margin: 0; }
     if (comp.game !== game) return;
     if (right === null) return quizNext();
     comp.checked[q.question_id] = right;
-    flashAnswer(right, quizNext);
+    flashAnswer(right, quizNext, answer, game.language);
   }
   // the whole screen goes green (right), or red while the question shakes (wrong): from the edges to solid, with a
-  // tick or a cross in the middle, and the next question appears as the colour fades
-  function flashAnswer(right, then) {
+  // tick or a cross in the middle (and, when wrong, the right answer for 2 seconds); the phone vibrates once when
+  // right and three times when wrong; the next question appears as the colour fades
+  function flashAnswer(right, then, answer = '', language = '') {
     const body = app.querySelector('.quiz-body');
     if (!right && body) body.classList.add('is-shaking');
+    try {
+      if (navigator.vibrate) navigator.vibrate(right ? 40 : [90, 70, 90, 70, 90]);
+    } catch (e) {
+      /* no vibration on this device */
+    }
     const flash = document.createElement('div');
     flash.className = `quiz-flash ${right ? 'is-right' : 'is-wrong'}`;
-    // and in the middle a green tick or a red cross, in a white disc (it shakes too when wrong)
-    flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span><span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : tr('Incorrecto', 'Wrong')}</span>`;
+    flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span>`
+      + (!right && answer ? `<span class="quiz-flash-word" lang="${esc(language)}">${esc(answer)}</span>` : '')
+      + `<span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : `${tr('Incorrecto', 'Wrong')}${answer ? `: ${esc(answer)}` : ''}`}</span>`;
     document.body.appendChild(flash);
-    setTimeout(then, right ? 380 : 520);
-    setTimeout(() => flash.remove(), right ? 900 : 1040);
+    setTimeout(then, right ? 380 : 2450);
+    setTimeout(() => flash.remove(), right ? 900 : 2900);
   }
   async function compFinish() {
     const game = comp.game;
@@ -4582,7 +4697,7 @@ h1, h2, p { margin: 0; }
           ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr(`Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 3} hoy)</small>`, `Play a ranked game <small>(${left} of ${st.rules ? st.rules.daily_limit : 3} today)</small>`)}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${left > 0 ? `${compRulesText(st.rules)} ${tr(`Puedes jugar ${st.rules ? st.rules.daily_limit : 3} partidas puntuables al día y para la clasificación cuenta la mejor de cada día; empezar una ya la gasta.`, `You can play ${st.rules ? st.rules.daily_limit : 3} ranked games a day and the leaderboard counts the best one of each day; starting one uses it up.`)}` : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
+        <p class="hint">${left > 0 ? `${compRulesText(st.rules)} ${tr(`Puedes jugar ${st.rules ? st.rules.daily_limit : 3} partidas puntuables al día y para la clasificación cuenta la mejor de cada día; una partida cuenta en cuanto respondes su primera pregunta.`, `You can play ${st.rules ? st.rules.daily_limit : 3} ranked games a day and the leaderboard counts the best one of each day; a game counts as soon as you answer its first question.`)}` : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
       : '';
     return `${compTop(compTitle())}
     <main class="screen">
@@ -4603,18 +4718,7 @@ h1, h2, p { margin: 0; }
         ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
         ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
       </section>
-      <section class="panel" aria-labelledby="h-profile">
-        <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
-        <p class="comp-me"><span>${tr('Nombre de usuario (visible)', 'Username (visible)')}</span> <strong>${esc(st.username || '')}</strong></p>
-        <p class="comp-me"><span>${tr('Correo', 'Email')}</span> <strong>${esc(comp.user.email || '')}</strong></p>
-        <p class="hint">${tr('El nombre de usuario es definitivo: no se puede cambiar.', 'The username is final: it cannot be changed.')}</p>
-        <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
-        ${
-          comp.confirmDelete
-            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
-            : `<p><button class="link-btn" type="button" data-act="comp-delete-open">${tr('Borrar mi cuenta', 'Delete my account')}</button></p>`
-        }
-      </section>
+      <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
     </main>`;
   }
@@ -4623,7 +4727,7 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 20 palabras del idioma elegido por partida.', ' Each game has 20 words in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 20 palabras del idioma elegido por partida.', ' Each game has 20 words in the selected language.') : tr(' Con cuenta, tu progreso se guarda; como invitado, no.', ' With an account, your progress is saved; as a guest, it is not.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
@@ -4712,7 +4816,11 @@ h1, h2, p { margin: 0; }
     return `<div class="sheet-backdrop" data-act="comp-abandon-close"></div>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ab-title">
         <h2 class="sheet-title" id="ab-title">${tr('¿Abandonar la partida?', 'Abandon the game?')}</h2>
-        <p>${tr(`No sumará puntos${comp.game && !comp.game.counted ? '' : ' y la partida de hoy queda gastada'}.`, `It will not add points${comp.game && !comp.game.counted ? '' : ' and today’s game is used up'}.`)}</p>
+        <p>${comp.game && !comp.game.counted
+          ? tr('No sumará puntos.', 'It will not add points.')
+          : comp.game && comp.game.questions.length && !Object.keys(comp.checked).length
+            ? tr('No sumará puntos. Como no has respondido nada, no gasta ninguna de las partidas de hoy.', 'It will not add points. As you have not answered anything, it does not use up any of today’s games.')
+            : tr('No sumará puntos y, si ya has respondido alguna pregunta, la partida de hoy queda gastada.', 'It will not add points and, if you have answered any question, today’s game is used up.')}</p>
         <div class="btn-row">
           <button class="btn" type="button" data-act="comp-abandon-close">${tr('Seguir jugando', 'Keep playing')}</button>
           <button class="btn btn-danger" type="button" data-act="comp-abandon">${tr('Abandonar', 'Abandon')}</button>
@@ -4854,14 +4962,27 @@ h1, h2, p { margin: 0; }
       : `${compAuthForm()}
       <section class="panel">
         <button class="btn" type="button" data-act="guest">${tr('Seguir como invitado', 'Continue as a guest')}</button>
-        <p class="hint">${tr('Como invitado estudias igual, pero tu progreso se guarda solo en este navegador y no puedes jugar la competición semanal ni aparecer en la clasificación de rachas. Podrás crear la cuenta más adelante: lo que hayas estudiado pasará a ella.', 'As a guest you study just the same, but your progress is saved only in this browser and you can neither play the weekly competition nor appear on the streaks ranking. You can create an account later: what you have studied will move to it.')}</p>
+        <p class="hint">${tr('Como invitado puedes estudiar, pero tu progreso no se guarda, no tienes racha y no puedes jugar la competición semanal ni aparecer en las clasificaciones.', 'As a guest you can study, but your progress is not saved, you have no streak and you can neither play the weekly competition nor appear on the rankings.')}</p>
       </section>`;
     return `
     <main class="screen langs welcome">
       <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       ${uiChoice()}
       ${account}
+      ${ui.guestWarn ? guestWarnSheet() : ''}
     </main>`;
+  }
+  // every time guest mode is chosen: what it means, before going on
+  function guestWarnSheet() {
+    return `<div class="sheet-backdrop" data-act="guest-back"></div>
+      <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="gw-title" aria-describedby="gw-text">
+        <h2 class="sheet-title" id="gw-title">${tr('Modo invitado', 'Guest mode')}</h2>
+        <p id="gw-text">${tr('Como invitado tu progreso no se guarda: lo que estudies se perderá al cerrar la app o al entrar en una cuenta. Tampoco tendrás racha ni podrás jugar la competición semanal.', 'As a guest your progress is not saved: what you study is lost when you close the app or sign in. You will not have a streak or be able to play the weekly competition either.')}</p>
+        <div class="btn-row">
+          <button class="btn" type="button" data-act="guest-back">${tr('Volver', 'Back')}</button>
+          <button class="btn btn-primary" type="button" data-act="guest-go">${tr('Seguir como invitado', 'Continue as a guest')}</button>
+        </div>
+      </div>`;
   }
   function compLinkSheet() {
     const site = String(COMP_CFG.site || '');
@@ -5158,7 +5279,12 @@ h1, h2, p { margin: 0; }
         go('home');
         break;
       case 'guest':
-        go('langs');
+      case 'guest-back':
+        ui.guestWarn = act === 'guest';
+        render();
+        break;
+      case 'guest-go':
+        enterGuest();
         break;
       case 'ui-lang':
         S.settings.uiLang = el.dataset.ui === 'en' ? 'en' : 'es';
@@ -5181,6 +5307,23 @@ h1, h2, p { margin: 0; }
         break;
       case 'welcome-signout':
         compStep(compSignOut);
+        break;
+      case 'account-delete-ask':
+      case 'account-delete-yes':
+      case 'account-delete-no':
+        ui.deleteStep = { 'account-delete-ask': 'ask', 'account-delete-yes': 'type' }[act] || null;
+        render();
+        if (ui.deleteStep === 'type') document.getElementById('delete-confirm')?.focus();
+        break;
+      case 'account-delete':
+        // from Ajustes, once «estoy seguro» is written: the account goes with everything of it on the server, then
+        // the account screen
+        if (!deleteWordsOk(document.getElementById('delete-confirm')?.value)) break;
+        ui.deleteStep = null;
+        compStep(async () => {
+          await compDeleteAccount();
+          go('welcome');
+        });
         break;
       case 'comp-link':
       case 'comp-link-close':
@@ -5220,6 +5363,7 @@ h1, h2, p { margin: 0; }
         break;
       }
       case 'settings':
+        ui.deleteStep = null;
         go('settings', { confirmReset: false, importOpen: false, exportText: '' });
         break;
       case 'lang-settings': {
@@ -5354,7 +5498,10 @@ h1, h2, p { margin: 0; }
 
   app.addEventListener('input', (e) => {
     const t = e.target;
-    if (t.id === 'browse-q') {
+    if (t.id === 'delete-confirm') {
+      const btn = app.querySelector('[data-act=account-delete]');
+      if (btn) btn.disabled = !deleteWordsOk(t.value);
+    } else if (t.id === 'browse-q') {
       ui.browseQuery = t.value;
       ui.expanded = null;
       const list = document.getElementById('browse-list');
@@ -5476,14 +5623,19 @@ h1, h2, p { margin: 0; }
     compCheckReturn(); // opened from the link of the confirmation email
     if (prev.screen === 'study' && prev.scope) startSession(String(prev.scope).split('/')[0].split('+').every((lv) => LEVELS.includes(lv)) ? prev.scope : levelsKey());
     // signing in or out (account screen, competition) starts or stops saving to the FlaXCards account
-    compHooks.signedIn = () => Sync.startAccount();
+    compHooks.signedIn = () => {
+      leaveGuest();
+      Sync.startAccount();
+    };
     compHooks.signingOut = () => Sync.leaveAccount();
     compHooks.signedOut = () => Sync.stopAccount();
     compHooks.sessionChanging = (user) => {
       if (Sync.acctUid !== (user?.id || null) || (!user && Sync.starting)) Sync.stopAccount();
     };
     compHooks.sessionChanged = (user) => {
-      if (user) Sync.startAccount();
+      if (!user) return;
+      leaveGuest();
+      Sync.startAccount();
     };
     Sync.init();
   }

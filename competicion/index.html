@@ -359,6 +359,30 @@ h1, h2, p { margin: 0; }
 .btn-danger { background: var(--again-bg); border-color: transparent; color: var(--again-ink); }
 .btn-danger:hover { border-color: var(--again-ink); }
 .btn-account svg { width: 18px; height: 18px; flex: none; }
+.account-delete-open { justify-self: center; }
+/* a part only for accounts, as a guest sees it: dimmed, and a note on top that stays */
+.is-locked { position: relative; }
+.is-locked > :not(.locked-note) { opacity: 0.35; filter: grayscale(1); }
+.locked-note {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 24px);
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.locked-note::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
+.comp-entry.is-locked:disabled { opacity: 1; cursor: default; }
+.guest-note { text-align: center; }
 
 /* ---------- level tabs (CEFR) ---------- */
 .levels {
@@ -498,6 +522,7 @@ h1, h2, p { margin: 0; }
 .levels-sm .level { padding: 6px 2px; }
 .levels-sm .level-name { font-size: 1.05rem; }
 .board-name small { display: block; font-weight: 400; font-size: 0.8125rem; color: var(--muted); }
+.board-gap { text-align: center; color: var(--muted); line-height: 1; }
 /* language home: the known words take the place of the app name */
 .home-top { gap: 6px; }
 .home-top .hero { flex: 1; min-width: 0; padding: 0; gap: 10px; }
@@ -1151,13 +1176,16 @@ h1, h2, p { margin: 0; }
 /* the answer of a competition question: the screen goes green, or red while the question shakes; from the edges to
    solid, then it fades as the next question comes */
 .quiz-flash { --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
-.quiz-flash.is-wrong { --flash: #e03131; animation-duration: 1.04s; }
+.quiz-flash.is-wrong { --flash: #e03131; animation-name: quiz-flash-long; animation-duration: 2.9s; }
 .quiz-flash::before, .quiz-flash::after { content: ''; position: absolute; inset: 0; }
 .quiz-flash::before { background: radial-gradient(circle at 50% 45%, transparent 0, var(--flash) 78%); }
 .quiz-flash::after { background: var(--flash); opacity: 0; animation: quiz-flash-solid 0.9s ease-out forwards; }
-.quiz-flash.is-wrong::after { animation-duration: 1.04s; }
+.quiz-flash.is-wrong::after { animation-name: quiz-flash-solid-long; animation-duration: 2.9s; }
 @keyframes quiz-flash { 0% { opacity: 0; } 20% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes quiz-flash-solid { 0%, 15% { opacity: 0; } 42%, 100% { opacity: 1; } }
+/* wrong: solid by 0.45 s, held until 2.45 s (the right answer for 2 s), then it fades */
+@keyframes quiz-flash-long { 0% { opacity: 0; } 8% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes quiz-flash-solid-long { 0%, 5% { opacity: 0; } 15%, 100% { opacity: 1; } }
 .quiz-flash-mark {
   position: absolute;
   z-index: 1; /* over the solid colour */
@@ -1172,16 +1200,30 @@ h1, h2, p { margin: 0; }
   background: #fff;
   color: var(--flash);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
-  animation: quiz-mark-pop 0.9s ease-out forwards;
+  animation: quiz-mark-pop 0.45s ease-out forwards;
 }
-.quiz-flash.is-wrong .quiz-flash-mark { animation-duration: 1.04s; }
 .quiz-flash-icon { display: grid; }
+/* when wrong, the right answer under the cross, for 2 seconds */
+.quiz-flash-word {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  right: 16px;
+  top: calc(45% + 84px);
+  text-align: center;
+  color: #fff;
+  font: 700 2rem/1.2 var(--font-display);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  animation: quiz-word-in 0.3s ease-out 0.35s forwards;
+}
+@keyframes quiz-word-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .quiz-flash-icon svg { width: 72px; height: 72px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .quiz-flash.is-wrong .quiz-flash-icon { animation: quiz-shake 0.45s ease-in-out 0.12s; }
 @keyframes quiz-mark-pop {
   0% { transform: scale(0.4); opacity: 0; }
-  22% { transform: scale(1.1); opacity: 1; }
-  34% { transform: scale(1); }
+  60% { transform: scale(1.1); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 .quiz-body.is-shaking { animation: quiz-shake 0.45s ease-in-out; }
@@ -1195,6 +1237,7 @@ h1, h2, p { margin: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .quiz-flash { opacity: 0.5; } /* no movement: a still colour for a moment */
+  .quiz-flash-word { opacity: 1; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .quiz-nav { display: flex; justify-content: space-between; }
@@ -1828,9 +1871,11 @@ h1, h2, p { margin: 0; }
       b.classList.toggle('is-chosen', Number(b.dataset.id) === Number(args.p_option));
     });
     let right = null;
+    let answer = '';
     try {
       const r = await rpc('quiz_answer', { p_session: game.session_id, p_question: q.question_id, p_text: null, p_option: null, ...args });
       right = !!(r && r.is_correct);
+      answer = (r && r.correct_text) || '';
     } catch (e) {
       /* sent with the rest at the end */
     }
@@ -1838,20 +1883,27 @@ h1, h2, p { margin: 0; }
     if (comp.game !== game) return;
     if (right === null) return quizNext();
     comp.checked[q.question_id] = right;
-    flashAnswer(right, quizNext);
+    flashAnswer(right, quizNext, answer, game.language);
   }
   // the whole screen goes green (right), or red while the question shakes (wrong): from the edges to solid, with a
-  // tick or a cross in the middle, and the next question appears as the colour fades
-  function flashAnswer(right, then) {
+  // tick or a cross in the middle (and, when wrong, the right answer for 2 seconds); the phone vibrates once when
+  // right and three times when wrong; the next question appears as the colour fades
+  function flashAnswer(right, then, answer = '', language = '') {
     const body = app.querySelector('.quiz-body');
     if (!right && body) body.classList.add('is-shaking');
+    try {
+      if (navigator.vibrate) navigator.vibrate(right ? 40 : [90, 70, 90, 70, 90]);
+    } catch (e) {
+      /* no vibration on this device */
+    }
     const flash = document.createElement('div');
     flash.className = `quiz-flash ${right ? 'is-right' : 'is-wrong'}`;
-    // and in the middle a green tick or a red cross, in a white disc (it shakes too when wrong)
-    flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span><span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : tr('Incorrecto', 'Wrong')}</span>`;
+    flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span>`
+      + (!right && answer ? `<span class="quiz-flash-word" lang="${esc(language)}">${esc(answer)}</span>` : '')
+      + `<span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : `${tr('Incorrecto', 'Wrong')}${answer ? `: ${esc(answer)}` : ''}`}</span>`;
     document.body.appendChild(flash);
-    setTimeout(then, right ? 380 : 520);
-    setTimeout(() => flash.remove(), right ? 900 : 1040);
+    setTimeout(then, right ? 380 : 2450);
+    setTimeout(() => flash.remove(), right ? 900 : 2900);
   }
   async function compFinish() {
     const game = comp.game;
@@ -1984,7 +2036,7 @@ h1, h2, p { margin: 0; }
           ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr(`Jugar partida puntuable <small>(${left} de ${st.rules ? st.rules.daily_limit : 3} hoy)</small>`, `Play a ranked game <small>(${left} of ${st.rules ? st.rules.daily_limit : 3} today)</small>`)}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${left > 0 ? `${compRulesText(st.rules)} ${tr(`Puedes jugar ${st.rules ? st.rules.daily_limit : 3} partidas puntuables al día y para la clasificación cuenta la mejor de cada día; empezar una ya la gasta.`, `You can play ${st.rules ? st.rules.daily_limit : 3} ranked games a day and the leaderboard counts the best one of each day; starting one uses it up.`)}` : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
+        <p class="hint">${left > 0 ? `${compRulesText(st.rules)} ${tr(`Puedes jugar ${st.rules ? st.rules.daily_limit : 3} partidas puntuables al día y para la clasificación cuenta la mejor de cada día; una partida cuenta en cuanto respondes su primera pregunta.`, `You can play ${st.rules ? st.rules.daily_limit : 3} ranked games a day and the leaderboard counts the best one of each day; a game counts as soon as you answer its first question.`)}` : tr('Ya has jugado las partidas puntuables de hoy. Mañana tendrás más; mientras, la práctica no suma puntos.', 'You have played today’s ranked games. You will have more tomorrow; meanwhile, practice does not add points.')}</p>`
       : '';
     return `${compTop(compTitle())}
     <main class="screen">
@@ -2005,18 +2057,7 @@ h1, h2, p { margin: 0; }
         ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
         ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
       </section>
-      <section class="panel" aria-labelledby="h-profile">
-        <h2 class="eyebrow" id="h-profile">${tr('Tu perfil', 'Your profile')}</h2>
-        <p class="comp-me"><span>${tr('Nombre de usuario (visible)', 'Username (visible)')}</span> <strong>${esc(st.username || '')}</strong></p>
-        <p class="comp-me"><span>${tr('Correo', 'Email')}</span> <strong>${esc(comp.user.email || '')}</strong></p>
-        <p class="hint">${tr('El nombre de usuario es definitivo: no se puede cambiar.', 'The username is final: it cannot be changed.')}</p>
-        <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
-        ${
-          comp.confirmDelete
-            ? `<div class="comp-delete" role="alert"><p>${tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.')}</p><button class="btn btn-danger" type="button" data-act="comp-delete" ${comp.busy ? 'disabled' : ''}>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button> <button class="btn" type="button" data-act="comp-delete-cancel">${tr('Cancelar', 'Cancel')}</button></div>`
-            : `<p><button class="link-btn" type="button" data-act="comp-delete-open">${tr('Borrar mi cuenta', 'Delete my account')}</button></p>`
-        }
-      </section>
+      <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
       ${ui.abandonOpen ? compAbandonSheet() : ''}
     </main>`;
   }
@@ -2025,7 +2066,7 @@ h1, h2, p { margin: 0; }
     const signup = comp.authMode === 'signup';
     return `<section class="panel">
       <h2 class="eyebrow">${signup ? tr('Crear una cuenta', 'Create an account') : tr('Entrar', 'Sign in')}</h2>
-      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 20 palabras del idioma elegido por partida.', ' Each game has 20 words in the selected language.') : tr(' Tu progreso de estudio se guarda en este dispositivo, con cuenta o sin ella.', ' Your study progress is saved on this device, with or without an account.')}</p>
+      <p class="hint">${tr('Para la competición semanal y la clasificación de rachas hace falta una cuenta (un nombre de usuario, un correo y una contraseña).', 'The weekly competition and the streaks ranking need an account (a username, an email and a password).')}${COMP_ALONE ? tr(' Son 20 palabras del idioma elegido por partida.', ' Each game has 20 words in the selected language.') : tr(' Con cuenta, tu progreso se guarda; como invitado, no.', ' With an account, your progress is saved; as a guest, it is not.')}</p>
       ${comp.notice ? `<p class="comp-notice">${esc(comp.notice)}</p>` : ''}
       ${compError()}
       <form class="comp-form" data-form="comp-auth">
@@ -2114,7 +2155,11 @@ h1, h2, p { margin: 0; }
     return `<div class="sheet-backdrop" data-act="comp-abandon-close"></div>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="ab-title">
         <h2 class="sheet-title" id="ab-title">${tr('¿Abandonar la partida?', 'Abandon the game?')}</h2>
-        <p>${tr(`No sumará puntos${comp.game && !comp.game.counted ? '' : ' y la partida de hoy queda gastada'}.`, `It will not add points${comp.game && !comp.game.counted ? '' : ' and today’s game is used up'}.`)}</p>
+        <p>${comp.game && !comp.game.counted
+          ? tr('No sumará puntos.', 'It will not add points.')
+          : comp.game && comp.game.questions.length && !Object.keys(comp.checked).length
+            ? tr('No sumará puntos. Como no has respondido nada, no gasta ninguna de las partidas de hoy.', 'It will not add points. As you have not answered anything, it does not use up any of today’s games.')
+            : tr('No sumará puntos y, si ya has respondido alguna pregunta, la partida de hoy queda gastada.', 'It will not add points and, if you have answered any question, today’s game is used up.')}</p>
         <div class="btn-row">
           <button class="btn" type="button" data-act="comp-abandon-close">${tr('Seguir jugando', 'Keep playing')}</button>
           <button class="btn btn-danger" type="button" data-act="comp-abandon">${tr('Abandonar', 'Abandon')}</button>
