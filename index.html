@@ -383,7 +383,6 @@ h1, h2, p { margin: 0; }
   text-align: center;
   box-shadow: var(--shadow);
 }
-.locked-note::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
 .comp-entry.is-locked:disabled { opacity: 1; cursor: default; }
 .guest-note { text-align: center; }
 
@@ -1178,7 +1177,11 @@ h1, h2, p { margin: 0; }
 .quiz-write input.is-wrong, .quiz-opt.is-chosen.is-wrong { border-color: #e03131; background: rgba(224, 49, 49, 0.12); }
 /* the answer of a competition question: the screen goes green, or red while the question shakes; from the edges to
    solid, then it fades as the next question comes */
-.quiz-flash { --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
+.quiz-write input.is-checking { border-color: var(--accent); animation: quiz-checking 0.7s ease-in-out infinite alternate; }
+@keyframes quiz-checking { from { box-shadow: 0 0 0 0 var(--accent-soft); } to { box-shadow: 0 0 0 6px var(--accent-soft); } }
+/* --seen-top / --seen-h: the part of the screen not under the keyboard (set by the app); the tick or cross and the
+   right answer go in its middle, smaller when it is short */
+.quiz-flash { --seen-top: 0px; --seen-h: 100vh; --disc: min(120px, calc(var(--seen-h) * 0.3)); --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
 .quiz-flash.is-wrong { --flash: #e03131; animation-name: quiz-flash-long; animation-duration: 2.9s; }
 .quiz-flash::before, .quiz-flash::after { content: ''; position: absolute; inset: 0; }
 .quiz-flash::before { background: radial-gradient(circle at 50% 45%, transparent 0, var(--flash) 78%); }
@@ -1193,10 +1196,10 @@ h1, h2, p { margin: 0; }
   position: absolute;
   z-index: 1; /* over the solid colour */
   left: 50%;
-  top: 45%;
-  width: 120px;
-  height: 120px;
-  margin: -60px 0 0 -60px;
+  top: calc(var(--seen-top) + var(--seen-h) * 0.4);
+  width: var(--disc);
+  height: var(--disc);
+  margin: calc(var(--disc) / -2) 0 0 calc(var(--disc) / -2);
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -1212,17 +1215,17 @@ h1, h2, p { margin: 0; }
   z-index: 1;
   left: 16px;
   right: 16px;
-  top: calc(45% + 84px);
+  top: calc(var(--seen-top) + var(--seen-h) * 0.4 + var(--disc) / 2 + 14px);
   text-align: center;
   color: #fff;
-  font: 700 2rem/1.2 var(--font-display);
+  font: 700 clamp(1.25rem, calc(var(--seen-h) * 0.05), 2rem)/1.2 var(--font-display);
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
   overflow-wrap: anywhere;
   opacity: 0;
   animation: quiz-word-in 0.3s ease-out 0.35s forwards;
 }
 @keyframes quiz-word-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.quiz-flash-icon svg { width: 72px; height: 72px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.quiz-flash-icon svg { width: calc(var(--disc) * 0.6); height: calc(var(--disc) * 0.6); fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .quiz-flash.is-wrong .quiz-flash-icon { animation: quiz-shake 0.45s ease-in-out 0.12s; }
 @keyframes quiz-mark-pop {
   0% { transform: scale(0.4); opacity: 0; }
@@ -1318,7 +1321,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.30';
+  const VERSION = '5.31';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -2448,9 +2451,6 @@ h1, h2, p { margin: 0; }
     },
     // after "start again": the Claude documents are rewritten empty; the FlaXCards account keeps its rows and the
     // date in the settings (resetAt, already marked) makes every device ignore the older ones
-    resetCards() {
-      if (this.claudeHost()) ALL_DECKS.forEach((d) => deckKeys(d).forEach((k) => this.mark(k)));
-    },
     savePending() {
       if (this.pendingQueued) return;
       this.pendingQueued = true;
@@ -2930,26 +2930,6 @@ h1, h2, p { margin: 0; }
     render();
     toast(tr(`Copia restaurada: ${n} ${n === 1 ? 'tarjeta actualizada' : 'tarjetas actualizadas'}.`, `Backup restored: ${n} ${n === 1 ? 'card updated' : 'cards updated'}.`));
   }
-  function doReset() {
-    if (!ui.confirmReset) {
-      ui.confirmReset = true;
-      render();
-      setTimeout(() => {
-        if (!ui.confirmReset) return;
-        ui.confirmReset = false;
-        if (ui.screen === 'settings') render();
-      }, 6000);
-      return;
-    }
-    ui.confirmReset = false;
-    S.cards = {};
-    S.settings.resetAt = Date.now();
-    saveSettings();
-    Sync.resetCards();
-    sess = null;
-    render();
-    toast(tr('Progreso borrado: todas las tarjetas vuelven a ser nuevas.', 'Progress reset: all cards are new again.'));
-  }
   function toggleDeck(id, on) {
     const set = new Set(S.settings.decks);
     if (on) set.add(id);
@@ -3052,7 +3032,7 @@ h1, h2, p { margin: 0; }
 
   // ---------------------------------------------------------------- views
   const VOCAB = new Set(['wortschatz', 'sicher-c1-wortschatz', 'en-vocabulary', 'it-vocabulary', 'pt-vocabulary', 'zh-vocabulary', 'ca-vocabulary']); // vocabulary decks: one line per translation, gender stripes
-  const ui = { screen: 'langs', flagOpen: false, abandonOpen: false, compLinkOpen: false, deckId: null, browseQuery: '', expanded: null, confirmReset: false, importOpen: false, exportText: '' };
+  const ui = { screen: 'langs', flagOpen: false, abandonOpen: false, compLinkOpen: false, deckId: null, browseQuery: '', expanded: null, importOpen: false, exportText: '' };
   const app = document.getElementById('app');
 
   const stat = (label, value, unit) =>
@@ -3856,29 +3836,69 @@ h1, h2, p { margin: 0; }
         </div>
         ${ui.exportText ? `<label class="field"><span>${tr('Copia de seguridad (cópiala a mano)', 'Backup (copy it by hand)')}</span><textarea id="export-text" rows="4" readonly>${esc(ui.exportText)}</textarea></label>` : ''}
         ${ui.importOpen ? `<label class="field"><span>${tr('Pega aquí tu copia de seguridad', 'Paste your backup here')}</span><textarea id="import-text" rows="5" spellcheck="false"></textarea></label><button class="btn btn-primary" type="button" data-act="import-do">${tr('Restaurar', 'Restore')}</button>` : ''}
-        <button class="btn btn-danger" type="button" data-act="reset">${ui.confirmReset ? tr('Pulsa otra vez para borrar todo el progreso', 'Tap again to reset all progress') : tr('Borrar el progreso', 'Reset progress')}</button>
       </section>`}
       ${accountGate() && hasSession() ? deleteAccountBlock() : ''}
       ${accountGate() ? `<button class="btn btn-account" type="button" data-act="logout">${hasSession() ? `${ICON.logout}<span>${tr('Cerrar sesión', 'Sign out')}</span>` : `${ICON.login}<span>${tr('Entrar o crear una cuenta', 'Sign in or create an account')}</span>`}</button>` : ''}
     </main>`;
   }
 
-  // deleting the account, from Ajustes: «¿Estás seguro?» (yes or cancel), then writing «estoy seguro»
-  const DELETE_WORDS = ['estoy seguro', 'i am sure'];
-  const deleteWordsOk = (v) => DELETE_WORDS.includes(String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim());
-  function deleteAccountBlock() {
-    const what = tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.');
-    const cancel = `<button class="btn" type="button" data-act="account-delete-no">${tr('Cancelar', 'Cancel')}</button>`;
-    if (ui.deleteStep === 'ask') {
-      return `<div class="comp-delete" role="alert"><p><strong>${tr('¿Estás seguro de que quieres borrar tu cuenta?', 'Are you sure you want to delete your account?')}</strong> ${what}</p>
-        <div class="btn-row"><button class="btn btn-danger" type="button" data-act="account-delete-yes">${tr('Sí, borrarla', 'Yes, delete it')}</button>${cancel}</div></div>`;
+  // what cannot be undone (deleting the account, the progress of a language) asks twice: «¿Estás seguro?» (yes or
+  // cancel), then writing «estoy seguro». kind is also the act of the last button ("account-delete", "progress-reset")
+  const SURE_WORDS = ['estoy seguro', 'i am sure'];
+  const sureWordsOk = (v) => SURE_WORDS.includes(String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim());
+  const TWO_CHECKS = ['account-delete', 'progress-reset'];
+  function twoChecks(kind, { link, question, what, yes, last }) {
+    const step = ui.confirm && ui.confirm.kind === kind ? ui.confirm.step : null;
+    const cancel = `<button class="btn" type="button" data-act="${kind}-no">${tr('Cancelar', 'Cancel')}</button>`;
+    if (step === 'ask') {
+      return `<div class="comp-delete" role="alert"><p><strong>${question}</strong> ${what}</p>
+        <div class="btn-row"><button class="btn btn-danger" type="button" data-act="${kind}-yes">${yes}</button>${cancel}</div></div>`;
     }
-    if (ui.deleteStep === 'type') {
+    if (step === 'type') {
       return `<div class="comp-delete" role="alert"><label class="field"><span>${tr('Para confirmarlo, escribe <b>«estoy seguro»</b>', 'To confirm it, write <b>“I am sure”</b>')}</span>
-        <input id="delete-confirm" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
-        <div class="btn-row"><button class="btn btn-danger" type="button" data-act="account-delete" disabled>${tr('Borrar mi cuenta para siempre', 'Delete my account for good')}</button>${cancel}</div></div>`;
+        <input class="sure-words" id="${kind}-confirm" autocomplete="off" autocapitalize="none" spellcheck="false"></label>
+        <div class="btn-row"><button class="btn btn-danger" type="button" data-act="${kind}" disabled>${last}</button>${cancel}</div></div>`;
     }
-    return `<button class="link-btn account-delete-open" type="button" data-act="account-delete-ask">${tr('Borrar mi cuenta', 'Delete my account')}</button>`;
+    return `<button class="link-btn account-delete-open" type="button" data-act="${kind}-ask">${link}</button>`;
+  }
+  const deleteAccountBlock = () => twoChecks('account-delete', {
+    link: tr('Borrar mi cuenta', 'Delete my account'),
+    question: tr('¿Estás seguro de que quieres borrar tu cuenta?', 'Are you sure you want to delete your account?'),
+    what: tr('Se borrarán para siempre tu cuenta, tu nombre de usuario, tus partidas y el progreso guardado en la cuenta. El progreso de este dispositivo se queda en él.', 'Your account, your username, your games and the progress saved in your account will be deleted for good. The progress on this device stays on it.'),
+    yes: tr('Sí, borrarla', 'Yes, delete it'),
+    last: tr('Borrar mi cuenta para siempre', 'Delete my account for good'),
+  });
+  const resetProgressBlock = () => twoChecks('progress-reset', {
+    link: tr(`Borrar el progreso de ${LANG().es.toLowerCase()}`, `Reset the ${LANG().enName} progress`),
+    question: tr(`¿Estás seguro de que quieres borrar tu progreso de ${LANG().es.toLowerCase()}?`, `Are you sure you want to reset your ${LANG().enName} progress?`),
+    what: tr(`Todas sus tarjetas volverán a ser nuevas, también en tu cuenta. Los demás idiomas y tu racha no cambian.`, 'All its cards will be new again, in your account too. The other languages and your streak do not change.'),
+    yes: tr('Sí, borrarlo', 'Yes, reset it'),
+    last: tr(`Borrar el progreso de ${LANG().es.toLowerCase()}`, `Reset the ${LANG().enName} progress`),
+  });
+  // the progress of the language being studied goes: its cards are new again (and so in the account, where they are
+  // sent as removed); the other languages, the days studied (the streak) and the settings stay
+  function resetLanguage() {
+    const lang = curLang();
+    const gone = Object.keys(S.cards).filter((k) => unitOf(k)?.d.lang === lang);
+    for (const k of gone) delete S.cards[k];
+    for (const k of Object.keys(S.notes)) if (unitOf(k)?.d.lang === lang) delete S.notes[k];
+    saveLocal();
+    gone.forEach((k) => Sync.card(k));
+    Sync.mark('notes');
+    sess = null;
+    render();
+    toast(tr(`Progreso de ${LANG().es.toLowerCase()} borrado: sus tarjetas vuelven a ser nuevas.`, `${LANG().enName} progress reset: its cards are new again.`));
+  }
+  // a word right in the weekly competition that was never seen in the study counts as learned, as if it had been
+  // right the first time there (back in a week); a word already seen keeps its own progress
+  function learnedInCompetition(cardId) {
+    const u = unitOf(cardId);
+    if (!u || isGuest() || S.cards[u.c.id] || S.cards[u.c.id + REV]) return;
+    const now = Date.now();
+    const st = schedule(u.c.id, null, 3, now);
+    st.k = dayNum(now);
+    S.cards[u.c.id] = st;
+    persist(u.c.id);
   }
 
   // the Ajustes of the language being studied (the gear inside it): card direction, decks, voice, and its decks
@@ -3922,6 +3942,7 @@ h1, h2, p { margin: 0; }
         ${curLang() === 'ca' ? `<p>${tr('Las tarjetas de catalán (central, según la norma del Institut d’Estudis Catalans) se han escrito para FlaXCards; las palabras salen de las más frecuentes del catalán (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en valenciano o balear se dice de otra forma muy común, la tarjeta lo indica («VAL:»).', 'The Catalan cards (central Catalan, following the Institut d’Estudis Catalans standard) were written for FlaXCards; the words are taken from the most frequent in Catalan (wordfreq) and the level of each one follows the Common European Framework. When Valencian or Balearic commonly use another word, the card shows it (‘VAL:’).')}</p>` : ''}${curLang() === 'zh' ? `<p>${tr('Las tarjetas de chino mandarín (caracteres simplificados, con pinyin) se han escrito para FlaXCards; las palabras salen de las más frecuentes del chino (wordfreq) y el nivel de cada una sigue el Marco Común Europeo, orientado por los niveles HSK (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).', 'The Mandarin Chinese cards (simplified characters, with pinyin) were written for FlaXCards; the words are taken from the most frequent in Chinese (wordfreq) and the level of each one follows the Common European Framework, guided by the HSK levels (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).')}</p>` : ''}${curLang() === 'pt' ? `<p>${tr('Las tarjetas de portugués (de Brasil) se han escrito para FlaXCards; las palabras salen de las más frecuentes del portugués (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en Portugal se dice de otra forma, la tarjeta lo indica («PT:»).', 'The Portuguese (Brazilian) cards were written for FlaXCards; the words are taken from the most frequent in Portuguese (wordfreq) and the level of each one follows the Common European Framework. When Portugal uses another word, the card shows it (‘PT:’).')}</p>` : ''}${curLang() === 'fr' ? `<p>${tr('Los mazos de francés combinan contenido original para FlaXCards y vocabulario contrastado con FLELex/Beacco y WikDict. Los ejemplos de la ampliación proceden de Tatoeba, Europarl o se han escrito para la app; puedes consultar las fuentes en cada tarjeta. Los niveles A1–C2 son orientativos, con ajustes según significado, uso y registro; no constituyen listas oficiales del MCER.', 'The French decks combine original FlaXCards content with vocabulary checked against FLELex/Beacco and WikDict. Expansion examples come from Tatoeba, Europarl or were written for the app; each card lists its sources. A1–C2 levels are estimates, adjusted for meaning, use and register; they are not official CEFR word lists.')}</p>` : ''}${knownOf(curLang()) === 'en' ? '<p>The English side of these cards (meanings, translations of the examples, notes and hints) was translated from their Spanish for FlaXCards.</p>' : ''}
         <p class="hint">${tr(`${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} tarjetas en ${DECKS.length} mazos, niveles ${LEVELS.map(levelName).join(', ')}.`, `${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} cards in ${DECKS.length} decks, levels ${LEVELS.map(levelName).join(', ')}.`)} ${curLang() === 'en' ? `${tr('Las tarjetas de inglés británico se han escrito para FlaXCards, seleccionadas por frecuencia (wordfreq) y utilidad. Los niveles A1–C2 son orientativos; el vocabulario se ha contrastado con las listas Oxford 3000/5000.', 'The British English cards were written for FlaXCards and selected for frequency (wordfreq) and usefulness. A1–C2 levels are teaching estimates; vocabulary levels were checked against the Oxford 3000/5000 lists.')}</p>` : ''}${curLang() === 'it' ? `${tr('Las tarjetas de italiano se han escrito para FlaXCards, seleccionadas por frecuencia (wordfreq) y utilidad. Las ampliaciones revisadas incluyen vocabulario cotidiano y frases habituales; sus niveles A1–C2 son orientativos, siguiendo los descriptores del MCER/CELI.', 'The Italian cards were written for FlaXCards and selected for frequency (wordfreq) and usefulness. Reviewed additions cover everyday vocabulary and useful phrases; their A1–C2 levels are teaching estimates informed by CEFR/CELI descriptors.')}</p>` : ''}${curLang() === 'de' ? `${tr('El vocabulario reúne mazos de AnkiWeb y una ampliación revisada. Las listas Goethe (A1–B1) y las frecuencias del IDS orientan el vocabulario original; las nuevas tarjetas tienen niveles A1–C2 estimados según su significado y uso.', 'The vocabulary combines AnkiWeb decks with reviewed additions. Goethe lists (A1–B1) and IDS frequencies inform the original vocabulary; new cards have estimated A1–C2 levels based on meaning and usage.')}</p>` : ''}
       </section>
+      ${resetProgressBlock()}
     </main>`;
   }
 
@@ -4526,7 +4547,12 @@ h1, h2, p { margin: 0; }
     comp.busy = true;
     // while the server checks it the screen stays as it is (redrawing it would close the phone's keyboard)
     const input = document.getElementById('quiz-answer');
-    if (input) input.readOnly = true;
+    if (input) {
+      input.readOnly = true;
+      input.classList.add('is-checking');
+    }
+    const send = app.querySelector('.quiz-write .btn-primary');
+    if (send) send.textContent = tr('Comprobando…', 'Checking…');
     app.querySelectorAll('.quiz-opt').forEach((b) => {
       b.disabled = true;
       b.classList.toggle('is-chosen', Number(b.dataset.id) === Number(args.p_option));
@@ -4537,6 +4563,7 @@ h1, h2, p { margin: 0; }
       const r = await rpc('quiz_answer', { p_session: game.session_id, p_question: q.question_id, p_text: null, p_option: null, ...args });
       right = !!(r && r.is_correct);
       answer = (r && r.correct_text) || '';
+      if (right && r.card && !COMP_ALONE) learnedInCompetition(r.card); // new to the study: now learned
     } catch (e) {
       /* sent with the rest at the end */
     }
@@ -4559,6 +4586,12 @@ h1, h2, p { margin: 0; }
     }
     const flash = document.createElement('div');
     flash.className = `quiz-flash ${right ? 'is-right' : 'is-wrong'}`;
+    // the part of the screen that is seen (above the phone's keyboard, when it is open)
+    const seen = window.visualViewport;
+    if (seen) {
+      flash.style.setProperty('--seen-top', `${Math.round(seen.offsetTop)}px`);
+      flash.style.setProperty('--seen-h', `${Math.round(seen.height)}px`);
+    }
     flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span>`
       + (!right && answer ? `<span class="quiz-flash-word" lang="${esc(language)}">${esc(answer)}</span>` : '')
       + `<span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : `${tr('Incorrecto', 'Wrong')}${answer ? `: ${esc(answer)}` : ''}`}</span>`;
@@ -4718,7 +4751,7 @@ h1, h2, p { margin: 0; }
         ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
         ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
       </section>
-      <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
+      ${COMP_ALONE ? `<button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>` : ''}
       ${ui.abandonOpen ? compAbandonSheet() : ''}
     </main>`;
   }
@@ -5311,19 +5344,30 @@ h1, h2, p { margin: 0; }
       case 'account-delete-ask':
       case 'account-delete-yes':
       case 'account-delete-no':
-        ui.deleteStep = { 'account-delete-ask': 'ask', 'account-delete-yes': 'type' }[act] || null;
+      case 'progress-reset-ask':
+      case 'progress-reset-yes':
+      case 'progress-reset-no': {
+        const kind = act.replace(/-(ask|yes|no)$/, '');
+        const step = { ask: 'ask', yes: 'type' }[act.slice(kind.length + 1)] || null;
+        ui.confirm = step ? { kind, step } : null;
         render();
-        if (ui.deleteStep === 'type') document.getElementById('delete-confirm')?.focus();
+        if (step === 'type') document.getElementById(`${kind}-confirm`)?.focus();
         break;
+      }
       case 'account-delete':
         // from Ajustes, once «estoy seguro» is written: the account goes with everything of it on the server, then
         // the account screen
-        if (!deleteWordsOk(document.getElementById('delete-confirm')?.value)) break;
-        ui.deleteStep = null;
+        if (!sureWordsOk(document.getElementById('account-delete-confirm')?.value)) break;
+        ui.confirm = null;
         compStep(async () => {
           await compDeleteAccount();
           go('welcome');
         });
+        break;
+      case 'progress-reset':
+        if (!sureWordsOk(document.getElementById('progress-reset-confirm')?.value)) break;
+        ui.confirm = null;
+        resetLanguage();
         break;
       case 'comp-link':
       case 'comp-link-close':
@@ -5363,10 +5407,11 @@ h1, h2, p { margin: 0; }
         break;
       }
       case 'settings':
-        ui.deleteStep = null;
-        go('settings', { confirmReset: false, importOpen: false, exportText: '' });
+        ui.confirm = null;
+        go('settings', { importOpen: false, exportText: '' });
         break;
       case 'lang-settings': {
+        ui.confirm = null;
         go('langsettings');
         const target = el.dataset.focus && document.getElementById(el.dataset.focus);
         if (target) target.scrollIntoView({ block: 'start' });
@@ -5488,9 +5533,6 @@ h1, h2, p { margin: 0; }
       case 'import-do':
         doImport();
         break;
-      case 'reset':
-        doReset();
-        break;
       default:
         break;
     }
@@ -5498,9 +5540,9 @@ h1, h2, p { margin: 0; }
 
   app.addEventListener('input', (e) => {
     const t = e.target;
-    if (t.id === 'delete-confirm') {
-      const btn = app.querySelector('[data-act=account-delete]');
-      if (btn) btn.disabled = !deleteWordsOk(t.value);
+    if (t.classList.contains('sure-words')) {
+      const btn = app.querySelector(`[data-act=${t.id.replace(/-confirm$/, '')}]`);
+      if (btn) btn.disabled = !sureWordsOk(t.value);
     } else if (t.id === 'browse-q') {
       ui.browseQuery = t.value;
       ui.expanded = null;

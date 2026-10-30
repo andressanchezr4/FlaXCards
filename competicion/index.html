@@ -380,7 +380,6 @@ h1, h2, p { margin: 0; }
   text-align: center;
   box-shadow: var(--shadow);
 }
-.locked-note::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: var(--ink); }
 .comp-entry.is-locked:disabled { opacity: 1; cursor: default; }
 .guest-note { text-align: center; }
 
@@ -1175,7 +1174,11 @@ h1, h2, p { margin: 0; }
 .quiz-write input.is-wrong, .quiz-opt.is-chosen.is-wrong { border-color: #e03131; background: rgba(224, 49, 49, 0.12); }
 /* the answer of a competition question: the screen goes green, or red while the question shakes; from the edges to
    solid, then it fades as the next question comes */
-.quiz-flash { --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
+.quiz-write input.is-checking { border-color: var(--accent); animation: quiz-checking 0.7s ease-in-out infinite alternate; }
+@keyframes quiz-checking { from { box-shadow: 0 0 0 0 var(--accent-soft); } to { box-shadow: 0 0 0 6px var(--accent-soft); } }
+/* --seen-top / --seen-h: the part of the screen not under the keyboard (set by the app); the tick or cross and the
+   right answer go in its middle, smaller when it is short */
+.quiz-flash { --seen-top: 0px; --seen-h: 100vh; --disc: min(120px, calc(var(--seen-h) * 0.3)); --flash: #2f9e44; position: fixed; inset: 0; z-index: 30; pointer-events: none; opacity: 0; animation: quiz-flash 0.9s ease-out forwards; }
 .quiz-flash.is-wrong { --flash: #e03131; animation-name: quiz-flash-long; animation-duration: 2.9s; }
 .quiz-flash::before, .quiz-flash::after { content: ''; position: absolute; inset: 0; }
 .quiz-flash::before { background: radial-gradient(circle at 50% 45%, transparent 0, var(--flash) 78%); }
@@ -1190,10 +1193,10 @@ h1, h2, p { margin: 0; }
   position: absolute;
   z-index: 1; /* over the solid colour */
   left: 50%;
-  top: 45%;
-  width: 120px;
-  height: 120px;
-  margin: -60px 0 0 -60px;
+  top: calc(var(--seen-top) + var(--seen-h) * 0.4);
+  width: var(--disc);
+  height: var(--disc);
+  margin: calc(var(--disc) / -2) 0 0 calc(var(--disc) / -2);
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -1209,17 +1212,17 @@ h1, h2, p { margin: 0; }
   z-index: 1;
   left: 16px;
   right: 16px;
-  top: calc(45% + 84px);
+  top: calc(var(--seen-top) + var(--seen-h) * 0.4 + var(--disc) / 2 + 14px);
   text-align: center;
   color: #fff;
-  font: 700 2rem/1.2 var(--font-display);
+  font: 700 clamp(1.25rem, calc(var(--seen-h) * 0.05), 2rem)/1.2 var(--font-display);
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
   overflow-wrap: anywhere;
   opacity: 0;
   animation: quiz-word-in 0.3s ease-out 0.35s forwards;
 }
 @keyframes quiz-word-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.quiz-flash-icon svg { width: 72px; height: 72px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.quiz-flash-icon svg { width: calc(var(--disc) * 0.6); height: calc(var(--disc) * 0.6); fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .quiz-flash.is-wrong .quiz-flash-icon { animation: quiz-shake 0.45s ease-in-out 0.12s; }
 @keyframes quiz-mark-pop {
   0% { transform: scale(0.4); opacity: 0; }
@@ -1865,7 +1868,12 @@ h1, h2, p { margin: 0; }
     comp.busy = true;
     // while the server checks it the screen stays as it is (redrawing it would close the phone's keyboard)
     const input = document.getElementById('quiz-answer');
-    if (input) input.readOnly = true;
+    if (input) {
+      input.readOnly = true;
+      input.classList.add('is-checking');
+    }
+    const send = app.querySelector('.quiz-write .btn-primary');
+    if (send) send.textContent = tr('Comprobando…', 'Checking…');
     app.querySelectorAll('.quiz-opt').forEach((b) => {
       b.disabled = true;
       b.classList.toggle('is-chosen', Number(b.dataset.id) === Number(args.p_option));
@@ -1876,6 +1884,7 @@ h1, h2, p { margin: 0; }
       const r = await rpc('quiz_answer', { p_session: game.session_id, p_question: q.question_id, p_text: null, p_option: null, ...args });
       right = !!(r && r.is_correct);
       answer = (r && r.correct_text) || '';
+      if (right && r.card && !COMP_ALONE) learnedInCompetition(r.card); // new to the study: now learned
     } catch (e) {
       /* sent with the rest at the end */
     }
@@ -1898,6 +1907,12 @@ h1, h2, p { margin: 0; }
     }
     const flash = document.createElement('div');
     flash.className = `quiz-flash ${right ? 'is-right' : 'is-wrong'}`;
+    // the part of the screen that is seen (above the phone's keyboard, when it is open)
+    const seen = window.visualViewport;
+    if (seen) {
+      flash.style.setProperty('--seen-top', `${Math.round(seen.offsetTop)}px`);
+      flash.style.setProperty('--seen-h', `${Math.round(seen.height)}px`);
+    }
     flash.innerHTML = `<span class="quiz-flash-mark"><span class="quiz-flash-icon">${right ? ICON.check : ICON.close}</span></span>`
       + (!right && answer ? `<span class="quiz-flash-word" lang="${esc(language)}">${esc(answer)}</span>` : '')
       + `<span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : `${tr('Incorrecto', 'Wrong')}${answer ? `: ${esc(answer)}` : ''}`}</span>`;
@@ -2057,7 +2072,7 @@ h1, h2, p { margin: 0; }
         ${rows ? `<ol class="board">${rows}</ol>` : `<p class="hint">${tr('Nadie ha jugado todavía esta semana. ¡Sé el primero!', 'Nobody has played yet this week. Be the first!')}</p>`}
         ${st.rank && !me ? `<p class="board-me">${tr(`Tú: puesto ${fmtInt(st.rank)} con ${fmtInt(st.total_points)} puntos`, `You: rank ${fmtInt(st.rank)} with ${fmtInt(st.total_points)} points`)}</p>` : ''}
       </section>
-      <button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>
+      ${COMP_ALONE ? `<button class="btn" type="button" data-act="comp-signout">${tr('Cerrar sesión', 'Sign out')}</button>` : ''}
       ${ui.abandonOpen ? compAbandonSheet() : ''}
     </main>`;
   }
