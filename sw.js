@@ -1,6 +1,6 @@
 // Service worker for the installable version: the app works offline after the first visit.
-// The build replaces 910d7f488f with a hash of the page, so every new version gets a fresh cache.
-const CACHE = 'karteikasten-910d7f488f';
+// The build replaces 39ada9c7f4 with a hash of the page, so every new version gets a fresh cache.
+const CACHE = 'karteikasten-39ada9c7f4';
 const FONTS = 'kk-fonts';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
