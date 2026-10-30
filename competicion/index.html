@@ -1811,10 +1811,11 @@ h1, h2, p { margin: 0; }
     el.setSelectionRange(el.value.length, el.value.length);
   }
   // to another question of the game (what is being written is kept)
-  function quizGo(index) {
+  // focus: false leaves the keyboard down (while the colour of an answer is still on screen)
+  function quizGo(index, focus = true) {
     comp.index = index;
     render();
-    focusAnswer();
+    if (focus) focusAnswer();
   }
   // the levels ticked in the app for the language of the competition (on its own page: all of them)
   const compLevels = () => (!COMP_ALONE && comp.language === curLang() ? curLevels() : null);
@@ -1840,8 +1841,8 @@ h1, h2, p { margin: 0; }
     if (left <= 5 && !comp.busy) compFinish();
   }
   // on to the next question, or the end
-  function quizNext() {
-    if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1);
+  function quizNext(focus = true) {
+    if (comp.index < comp.game.questions.length - 1) quizGo(comp.index + 1, focus);
     else compFinish();
   }
   function compChoose(optionId) {
@@ -1863,10 +1864,30 @@ h1, h2, p { margin: 0; }
   }
   // the server checks the answer at once (and keeps it as final): green or red, then the next question. Without an
   // answer from it (no connection, an older server) the game goes on and the answer is sent at the end, as before
+  // the phone's keyboard goes down first (if it is up), so that the tick or cross is seen on the whole screen; it
+  // waits for it at most 700 ms
+  function keyboardDown() {
+    const input = document.getElementById('quiz-answer');
+    if (input && document.activeElement === input) input.blur();
+    const seen = window.visualViewport;
+    const down = () => !seen || seen.height > window.innerHeight * 0.85;
+    if (down()) return Promise.resolve();
+    return new Promise((done) => {
+      const end = () => {
+        seen.removeEventListener('resize', check);
+        clearTimeout(timer);
+        done();
+      };
+      const check = () => down() && end();
+      const timer = setTimeout(end, 700);
+      seen.addEventListener('resize', check);
+    });
+  }
   async function checkAnswer(q, args) {
     const game = comp.game;
     comp.busy = true;
-    // while the server checks it the screen stays as it is (redrawing it would close the phone's keyboard)
+    // while the server checks it the keyboard goes down and the screen stays as it is
+    const closing = keyboardDown();
     const input = document.getElementById('quiz-answer');
     if (input) {
       input.readOnly = true;
@@ -1888,6 +1909,7 @@ h1, h2, p { margin: 0; }
     } catch (e) {
       /* sent with the rest at the end */
     }
+    await closing;
     comp.busy = false;
     if (comp.game !== game) return;
     if (right === null) return quizNext();
@@ -1917,8 +1939,12 @@ h1, h2, p { margin: 0; }
       + (!right && answer ? `<span class="quiz-flash-word" lang="${esc(language)}">${esc(answer)}</span>` : '')
       + `<span class="sr-only" role="status">${right ? tr('Correcto', 'Right') : `${tr('Incorrecto', 'Wrong')}${answer ? `: ${esc(answer)}` : ''}`}</span>`;
     document.body.appendChild(flash);
-    setTimeout(then, right ? 380 : 2450);
-    setTimeout(() => flash.remove(), right ? 900 : 2900);
+    // the next question comes under the solid colour, but the keyboard only comes back once the colour is gone
+    setTimeout(() => then(false), right ? 380 : 2450);
+    setTimeout(() => {
+      flash.remove();
+      if (ui.screen === 'quiz') focusAnswer();
+    }, right ? 900 : 2900);
   }
   async function compFinish() {
     const game = comp.game;
