@@ -1081,6 +1081,9 @@ h1, h2, p { margin: 0; }
 .foot.about-decks { gap: 8px; line-height: 1.45; text-align: left; }
 .foot.about-decks p { margin: 0; }
 .foot.about-decks .hint { font-size: inherit; color: inherit; }
+/* an enumeration in it: one line per item, what it is in bold */
+.about-list { margin: -4px 0 0; padding-left: 1.1em; display: grid; gap: 2px; }
+.about-list b { font-weight: 700; color: var(--ink-2); }
 .toast {
   position: fixed;
   left: 50%;
@@ -1098,6 +1101,11 @@ h1, h2, p { margin: 0; }
   transition: opacity 0.6s ease;
 }
 .toast.is-out { opacity: 0; }
+/* a toast with a list (the goal badges explained): one line per item, its badge first */
+.toast-list { display: grid; gap: 8px; }
+.toast-row { display: flex; align-items: center; gap: 8px; }
+.toast-row .tally { flex: none; }
+.toast-head { font-weight: 700; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
@@ -1178,6 +1186,10 @@ h1, h2, p { margin: 0; }
 .comp-language { flex: 1; min-width: 84px; min-height: 44px; }
 .comp-language[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .comp-language-picker .hint { margin-bottom: 0; }
+/* the points of each answer, one per line: the points in a column, then the answer */
+.comp-rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 0.875rem; color: var(--muted); }
+.comp-rules li { display: contents; }
+.comp-rules b { justify-self: end; color: var(--ink); font-variant-numeric: tabular-nums; }
 .comp-error { padding: 10px 12px; border-radius: 10px; background: var(--again-bg); color: var(--again-ink); font-weight: 700; }
 .comp-notice { padding: 10px 12px; border-radius: 10px; background: var(--miss-bg); color: var(--miss-ink); }
 .comp-delete { margin-top: 12px; padding: 12px; border: 1px solid var(--again-ink); border-radius: 10px; }
@@ -1425,7 +1437,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.39';
+  const VERSION = '5.40';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3635,8 +3647,10 @@ h1, h2, p { margin: 0; }
     </main>`;
   }
 
-  // where the cards of the language studied come from (shown at the foot of its home screen)
-  const aboutDecks = () => `${curLang() === 'la' ? `<p>${tr('Las palabras de las tarjetas de latín clásico salen de las más frecuentes en los autores clásicos (César, Cicerón, Virgilio, Livio… en The Latin Library, de dominio público) y llevan las vocales largas marcadas (ā, ē, ī, ō, ū). Como el latín no tiene niveles oficiales, A1–C2 indica cuándo suele aprenderse cada palabra: A1–A2, los primeros cursos; B1–B2, para leer a César y a Cicerón; C1–C2, para los poetas y los historiadores.', 'The words of the classical Latin cards are taken from the most frequent in the classical authors (Caesar, Cicero, Virgil, Livy… in The Latin Library, public domain) and their long vowels are marked (ā, ē, ī, ō, ū). As Latin has no official levels, A1–C2 shows when each word is usually learnt: A1–A2, the first courses; B1–B2, to read Caesar and Cicero; C1–C2, for the poets and historians.')}</p>` : ''}${curLang() === 'ca' ? `<p>${tr('Las tarjetas de catalán están en catalán central, según la norma del Institut d’Estudis Catalans; las palabras salen de las más frecuentes del catalán (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en valenciano o balear se dice de otra forma muy común, la tarjeta lo indica («VAL:»).', 'The Catalan cards are in central Catalan, following the Institut d’Estudis Catalans standard; the words are taken from the most frequent in Catalan (wordfreq) and the level of each one follows the Common European Framework. When Valencian or Balearic commonly use another word, the card shows it (‘VAL:’).')}</p>` : ''}${curLang() === 'zh' ? `<p>${tr('Las tarjetas de chino mandarín usan caracteres simplificados, con pinyin; las palabras salen de las más frecuentes del chino (wordfreq) y el nivel de cada una sigue el Marco Común Europeo, orientado por los niveles HSK (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).', 'The Mandarin Chinese cards use simplified characters, with pinyin; the words are taken from the most frequent in Chinese (wordfreq) and the level of each one follows the Common European Framework, guided by the HSK levels (HSK 1 ≈ A1, HSK 2 ≈ A2, HSK 3–4 ≈ B1, HSK 5 ≈ B2, HSK 6 ≈ C1, HSK 7–9 ≈ C2).')}</p>` : ''}${curLang() === 'pt' ? `<p>${tr('Las tarjetas de portugués están en portugués de Brasil; las palabras salen de las más frecuentes del portugués (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en Portugal se dice de otra forma, la tarjeta lo indica («PT:»).', 'The Portuguese cards are in Brazilian Portuguese; the words are taken from the most frequent in Portuguese (wordfreq) and the level of each one follows the Common European Framework. When Portugal uses another word, the card shows it (‘PT:’).')}</p>` : ''}${curLang() === 'fr' ? `<p>${tr('Los mazos de francés combinan contenido original y vocabulario contrastado con FLELex/Beacco y WikDict. Los ejemplos de la ampliación proceden de Tatoeba, Europarl o son originales; puedes consultar las fuentes en cada tarjeta. Los niveles A1–C2 son orientativos, con ajustes según significado, uso y registro; no constituyen listas oficiales del MCER.', 'The French decks combine original content with vocabulary checked against FLELex/Beacco and WikDict. Expansion examples come from Tatoeba, Europarl or are original; each card lists its sources. A1–C2 levels are estimates, adjusted for meaning, use and register; they are not official CEFR word lists.')}</p>` : ''}${knownOf(curLang()) === 'en' ? '<p>The English side of these cards (meanings, translations of the examples, notes and hints) was translated from their Spanish.</p>' : ''}
+  // where the cards of the language studied come from (shown at the foot of its home screen); an enumeration in it,
+  // one line per item: [what, its explanation]
+  const aboutList = (items) => `<ul class="about-list">${items.map(([k, v]) => `<li><b>${k}</b> ${v}</li>`).join('')}</ul>`;
+  const aboutDecks = () => `${curLang() === 'la' ? `<p>${tr('Las palabras de las tarjetas de latín clásico salen de las más frecuentes en los autores clásicos (César, Cicerón, Virgilio, Livio… en The Latin Library, de dominio público) y llevan las vocales largas marcadas (ā, ē, ī, ō, ū). Como el latín no tiene niveles oficiales, A1–C2 indica cuándo suele aprenderse cada palabra:', 'The words of the classical Latin cards are taken from the most frequent in the classical authors (Caesar, Cicero, Virgil, Livy… in The Latin Library, public domain) and their long vowels are marked (ā, ē, ī, ō, ū). As Latin has no official levels, A1–C2 shows when each word is usually learnt:')}</p>${aboutList([['A1–A2:', tr('los primeros cursos', 'the first courses')], ['B1–B2:', tr('para leer a César y a Cicerón', 'to read Caesar and Cicero')], ['C1–C2:', tr('para los poetas y los historiadores', 'for the poets and historians')]])}` : ''}${curLang() === 'ca' ? `<p>${tr('Las tarjetas de catalán están en catalán central, según la norma del Institut d’Estudis Catalans; las palabras salen de las más frecuentes del catalán (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en valenciano o balear se dice de otra forma muy común, la tarjeta lo indica («VAL:»).', 'The Catalan cards are in central Catalan, following the Institut d’Estudis Catalans standard; the words are taken from the most frequent in Catalan (wordfreq) and the level of each one follows the Common European Framework. When Valencian or Balearic commonly use another word, the card shows it (‘VAL:’).')}</p>` : ''}${curLang() === 'zh' ? `<p>${tr('Las tarjetas de chino mandarín usan caracteres simplificados, con pinyin; las palabras salen de las más frecuentes del chino (wordfreq) y el nivel de cada una sigue el Marco Común Europeo, orientado por los niveles HSK:', 'The Mandarin Chinese cards use simplified characters, with pinyin; the words are taken from the most frequent in Chinese (wordfreq) and the level of each one follows the Common European Framework, guided by the HSK levels:')}</p>${aboutList([['HSK 1', '≈ A1'], ['HSK 2', '≈ A2'], ['HSK 3–4', '≈ B1'], ['HSK 5', '≈ B2'], ['HSK 6', '≈ C1'], ['HSK 7–9', '≈ C2']])}` : ''}${curLang() === 'pt' ? `<p>${tr('Las tarjetas de portugués están en portugués de Brasil; las palabras salen de las más frecuentes del portugués (wordfreq) y el nivel de cada una sigue el Marco Común Europeo. Cuando en Portugal se dice de otra forma, la tarjeta lo indica («PT:»).', 'The Portuguese cards are in Brazilian Portuguese; the words are taken from the most frequent in Portuguese (wordfreq) and the level of each one follows the Common European Framework. When Portugal uses another word, the card shows it (‘PT:’).')}</p>` : ''}${curLang() === 'fr' ? `<p>${tr('Los mazos de francés combinan contenido original y vocabulario contrastado con FLELex/Beacco y WikDict. Los ejemplos de la ampliación proceden de Tatoeba, Europarl o son originales; puedes consultar las fuentes en cada tarjeta. Los niveles A1–C2 son orientativos, con ajustes según significado, uso y registro; no constituyen listas oficiales del MCER.', 'The French decks combine original content with vocabulary checked against FLELex/Beacco and WikDict. Expansion examples come from Tatoeba, Europarl or are original; each card lists its sources. A1–C2 levels are estimates, adjusted for meaning, use and register; they are not official CEFR word lists.')}</p>` : ''}${knownOf(curLang()) === 'en' ? '<p>The English side of these cards (meanings, translations of the examples, notes and hints) was translated from their Spanish.</p>' : ''}
         <p class="hint">${tr(`${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} tarjetas en ${DECKS.length} mazos, niveles ${LEVELS.map((lv) => levelName(lv)).join(', ')}.`, `${fmtInt(DECKS.reduce((n, d) => n + d.cards.length, 0))} cards in ${DECKS.length} decks, levels ${LEVELS.map((lv) => levelName(lv)).join(', ')}.`)} ${curLang() === 'en' ? `${tr('Las tarjetas de inglés británico se han seleccionado por frecuencia (wordfreq) y utilidad. Los niveles A1–C2 son orientativos; el vocabulario se ha contrastado con las listas Oxford 3000/5000.', 'The British English cards were selected for frequency (wordfreq) and usefulness. A1–C2 levels are teaching estimates; vocabulary levels were checked against the Oxford 3000/5000 lists.')}</p>` : ''}${curLang() === 'it' ? `${tr('Las tarjetas de italiano se han seleccionado por frecuencia (wordfreq) y utilidad. Las ampliaciones revisadas incluyen vocabulario cotidiano y frases habituales; sus niveles A1–C2 son orientativos, siguiendo los descriptores del MCER/CELI.', 'The Italian cards were selected for frequency (wordfreq) and usefulness. Reviewed additions cover everyday vocabulary and useful phrases; their A1–C2 levels are teaching estimates informed by CEFR/CELI descriptors.')}</p>` : ''}${curLang() === 'de' ? `${tr('El vocabulario reúne mazos de AnkiWeb y una ampliación revisada. Las listas Goethe (A1–B1) y las frecuencias del IDS orientan el vocabulario original; las nuevas tarjetas tienen niveles A1–C2 estimados según su significado y uso.', 'The vocabulary combines AnkiWeb decks with reviewed additions. Goethe lists (A1–B1) and IDS frequencies inform the original vocabulary; new cards have estimated A1–C2 levels based on meaning and usage.')}</p>` : ''}`;
 
   function viewHome() {
@@ -5271,9 +5285,11 @@ h1, h2, p { margin: 0; }
     const right = r.right || 10;
     const choice = format ? format === 'choice' : !r.typed;
     const wrong = String((format === 'choice' ? r.choice_wrong : r.wrong) ?? -5).replace('-', '−');
-    return !choice
-      ? tr(`Palabra acertada: +${right} · casi correcta (una letra mal): +${right / 2} · incorrecta: 0`, `Right word: +${right} · almost right (one letter wrong): +${right / 2} · wrong: 0`)
-      : tr(`Palabra acertada: +${right} · incorrecta: ${wrong}`, `Right word: +${right} · wrong: ${wrong}`);
+    const rows = !choice
+      ? [[`+${right}`, tr('Palabra acertada', 'Right word')], [`+${right / 2}`, tr('Casi correcta (una letra mal)', 'Almost right (one letter wrong)')], ['0', tr('Incorrecta', 'Wrong')]]
+      : [[`+${right}`, tr('Palabra acertada', 'Right word')], [wrong, tr('Incorrecta', 'Wrong')]];
+    // one line per answer: the points, then the answer
+    return `<ul class="comp-rules">${rows.map(([pts, what]) => `<li><b>${pts}</b><span>${what}</span></li>`).join('')}</ul>`;
   }
   // written answer or multiple choice for the next games, as the Estudio/Repaso switch of the language's home; both
   // count for the same ranking (only where the language has both)
@@ -5349,7 +5365,7 @@ h1, h2, p { margin: 0; }
           ${!active && left > 0 ? `<button class="btn btn-primary comp-ranked" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr('Jugar partida puntuable', 'Play a ranked game')}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${compRulesText(st.rules, format)}</p>`
+        ${compRulesText(st.rules, format)}`
       : '';
     return `${compTop(compTitle())}
     <main class="screen">
@@ -5857,13 +5873,15 @@ h1, h2, p { margin: 0; }
     wake = null;
   }
 
-  // a message at the bottom for a few seconds (ms), that then fades out
+  // a message at the bottom for a few seconds (ms), that then fades out; html: msg is markup made here (a list), never
+  // text typed by someone
   let toastTimer = 0;
   let toastFade = 0;
-  function toast(msg, ms = 4000) {
+  function toast(msg, ms = 4000, html = false) {
     const el = document.getElementById('toast');
     if (!el) return;
-    el.textContent = msg;
+    if (html) el.innerHTML = msg;
+    else el.textContent = msg;
     el.hidden = false;
     el.classList.remove('is-out');
     clearTimeout(toastTimer);
@@ -6009,12 +6027,18 @@ h1, h2, p { margin: 0; }
         render();
         break;
       case 'goal-tally': {
+        // the goal on top, then one line per badge: the badge, then what it counts
         const days = Number(el.dataset.days);
         const weeks = Number(el.dataset.weeks);
         const months = Number(el.dataset.months);
         const goal = S.settings.dailyGoal;
         const times = (n) => (n === 1 ? tr('vez', 'time') : tr('veces', 'times'));
-        toast(tr(`(1) Verde: has cumplido el objetivo diario (${goal} palabras) ${days} ${days === 1 ? 'día' : 'días'}. (7) Rojo: lo has cumplido 7 días seguidos ${weeks} ${times(weeks)}. (30) Dorado: lo has cumplido 30 días seguidos ${months} ${times(months)}.`, `(1) Green: you met the daily goal (${goal} words) on ${days} ${days === 1 ? 'day' : 'days'}. (7) Red: you met it 7 days in a row ${weeks} ${times(weeks)}. (30) Gold: you met it 30 days in a row ${months} ${times(months)}.`), 6000);
+        const row = (cls, mark, text) => `<span class="toast-row"><span class="tally ${cls}"><i>${mark}</i></span><span>${text}</span></span>`;
+        toast(`<span class="toast-list"><span class="toast-head">${tr(`Tu objetivo diario: ${goal} palabras`, `Your daily goal: ${goal} words`)}</span>${[
+          row('is-day', 1, tr(`Cumplido: <b>${days}</b> ${days === 1 ? 'día' : 'días'}`, `Met: <b>${days}</b> ${days === 1 ? 'day' : 'days'}`)),
+          row('is-week', 7, tr(`7 días seguidos: <b>${weeks}</b> ${times(weeks)}`, `7 days in a row: <b>${weeks}</b> ${times(weeks)}`)),
+          row('is-month', 30, tr(`30 días seguidos: <b>${months}</b> ${times(months)}`, `30 days in a row: <b>${months}</b> ${times(months)}`)),
+        ].join('')}</span>`, 6000, true);
         break;
       }
       case 'comp-link-copy': {

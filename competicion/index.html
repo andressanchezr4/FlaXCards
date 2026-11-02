@@ -1078,6 +1078,9 @@ h1, h2, p { margin: 0; }
 .foot.about-decks { gap: 8px; line-height: 1.45; text-align: left; }
 .foot.about-decks p { margin: 0; }
 .foot.about-decks .hint { font-size: inherit; color: inherit; }
+/* an enumeration in it: one line per item, what it is in bold */
+.about-list { margin: -4px 0 0; padding-left: 1.1em; display: grid; gap: 2px; }
+.about-list b { font-weight: 700; color: var(--ink-2); }
 .toast {
   position: fixed;
   left: 50%;
@@ -1095,6 +1098,11 @@ h1, h2, p { margin: 0; }
   transition: opacity 0.6s ease;
 }
 .toast.is-out { opacity: 0; }
+/* a toast with a list (the goal badges explained): one line per item, its badge first */
+.toast-list { display: grid; gap: 8px; }
+.toast-row { display: flex; align-items: center; gap: 8px; }
+.toast-row .tally { flex: none; }
+.toast-head { font-weight: 700; }
 
 @keyframes rise {
   from { opacity: 0; transform: translateY(6px); }
@@ -1175,6 +1183,10 @@ h1, h2, p { margin: 0; }
 .comp-language { flex: 1; min-width: 84px; min-height: 44px; }
 .comp-language[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .comp-language-picker .hint { margin-bottom: 0; }
+/* the points of each answer, one per line: the points in a column, then the answer */
+.comp-rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 0.875rem; color: var(--muted); }
+.comp-rules li { display: contents; }
+.comp-rules b { justify-self: end; color: var(--ink); font-variant-numeric: tabular-nums; }
 .comp-error { padding: 10px 12px; border-radius: 10px; background: var(--again-bg); color: var(--again-ink); font-weight: 700; }
 .comp-notice { padding: 10px 12px; border-radius: 10px; background: var(--miss-bg); color: var(--miss-ink); }
 .comp-delete { margin-top: 12px; padding: 12px; border: 1px solid var(--again-ink); border-radius: 10px; }
@@ -2205,9 +2217,11 @@ h1, h2, p { margin: 0; }
     const right = r.right || 10;
     const choice = format ? format === 'choice' : !r.typed;
     const wrong = String((format === 'choice' ? r.choice_wrong : r.wrong) ?? -5).replace('-', '−');
-    return !choice
-      ? tr(`Palabra acertada: +${right} · casi correcta (una letra mal): +${right / 2} · incorrecta: 0`, `Right word: +${right} · almost right (one letter wrong): +${right / 2} · wrong: 0`)
-      : tr(`Palabra acertada: +${right} · incorrecta: ${wrong}`, `Right word: +${right} · wrong: ${wrong}`);
+    const rows = !choice
+      ? [[`+${right}`, tr('Palabra acertada', 'Right word')], [`+${right / 2}`, tr('Casi correcta (una letra mal)', 'Almost right (one letter wrong)')], ['0', tr('Incorrecta', 'Wrong')]]
+      : [[`+${right}`, tr('Palabra acertada', 'Right word')], [wrong, tr('Incorrecta', 'Wrong')]];
+    // one line per answer: the points, then the answer
+    return `<ul class="comp-rules">${rows.map(([pts, what]) => `<li><b>${pts}</b><span>${what}</span></li>`).join('')}</ul>`;
   }
   // written answer or multiple choice for the next games, as the Estudio/Repaso switch of the language's home; both
   // count for the same ranking (only where the language has both)
@@ -2283,7 +2297,7 @@ h1, h2, p { margin: 0; }
           ${!active && left > 0 ? `<button class="btn btn-primary comp-ranked" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr('Jugar partida puntuable', 'Play a ranked game')}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${compRulesText(st.rules, format)}</p>`
+        ${compRulesText(st.rules, format)}`
       : '';
     return `${compTop(compTitle())}
     <main class="screen">
