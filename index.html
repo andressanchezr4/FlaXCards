@@ -795,6 +795,28 @@ h1, h2, p { margin: 0; }
 .kcard.g-f { background-color: var(--card-f); }
 .kcard.g-n { background-color: var(--card-n); }
 .kcard.g-pl { background-color: var(--card-pl); }
+/* the first-time tutorial over the first card: a hand that taps (front) or swipes (back) and a bubble; it lets every
+   touch through to the card, and hides while the card is dragged */
+.card-wrap { position: relative; }
+.tuto { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 16px 28px; pointer-events: none; transition: opacity 0.15s; }
+.card-wrap.is-dragging .tuto { opacity: 0; }
+.tuto-hand { position: relative; font-size: 3.25rem; line-height: 1; filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.3)); }
+.tuto.is-tap .tuto-hand { animation: tuto-tap 1.4s ease-in-out infinite; }
+.tuto.is-swipe .tuto-hand { animation: tuto-swipe 2.6s ease-in-out infinite; }
+.tuto-ripple { position: absolute; left: 50%; top: 2px; width: 34px; height: 34px; margin-left: -20px; border-radius: 50%; border: 3px solid var(--accent); opacity: 0; }
+.tuto.is-tap .tuto-ripple { animation: tuto-ripple 1.4s ease-out infinite; }
+.tuto-tip { max-width: 100%; margin: 0; padding: 10px 14px; border-radius: 12px; background: var(--ink); color: var(--paper); font-size: 0.9375rem; font-weight: 700; line-height: 1.3; text-align: center; box-shadow: var(--shadow); }
+/* the colour step: the hand under the «Aa» button at the top right of the card, the bubble (with «Entendido») below */
+.tuto.is-colors { justify-content: flex-start; align-items: flex-end; padding: 46px 12px 0; }
+.tuto.is-colors .tuto-hand { margin-right: 4px; animation: tuto-point 1.2s ease-in-out infinite; }
+.tuto.is-colors .tuto-tip { pointer-events: auto; display: grid; gap: 10px; justify-items: center; }
+.tuto-tip p { margin: 0; }
+.tuto-tip .btn { min-height: 36px; padding: 6px 18px; }
+@keyframes tuto-point { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes tuto-tap { 0%, 100% { transform: translateY(0) scale(1); } 35%, 55% { transform: translateY(8px) scale(0.9); } }
+@keyframes tuto-ripple { 0%, 30% { opacity: 0; transform: scale(0.4); } 45% { opacity: 0.9; } 100% { opacity: 0; transform: scale(1.8); } }
+@keyframes tuto-swipe { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(80px) rotate(12deg); } 50% { transform: translateX(0) rotate(0); } 75% { transform: translateX(-80px) rotate(-12deg); } }
+@media (prefers-reduced-motion: reduce) { .tuto-hand, .tuto-ripple, .tuto.is-colors .tuto-hand { animation: none !important; } }
 /* a card in a gender colour (or split in gender stripes) has no ruled lines */
 .kcard.g-m, .kcard.g-f, .kcard.g-n, .kcard.g-pl, .kcard:has(.stripes) { background-image: none; }
 .kcard.g-m .kcard-head, .kcard.g-f .kcard-head, .kcard.g-n .kcard-head, .kcard.g-pl .kcard-head { background: transparent; }
@@ -1350,6 +1372,13 @@ h1, h2, p { margin: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
 .langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
+/* next to the rankings: green dot = days with the daily goal met, red dot = times met 7 days in a row */
+.goal-tally { display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; min-height: 44px; padding: 0 6px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font: 700 0.8125rem/1 var(--font-body); cursor: pointer; }
+.goal-tally:hover { background: var(--paper); }
+.tally { display: inline-flex; align-items: center; gap: 5px; }
+.tally i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.tally.is-day i { background: #2f9e44; }
+.tally.is-week i { background: #e03131; }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
@@ -1392,7 +1421,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.34';
+  const VERSION = '5.35';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -2137,11 +2166,51 @@ h1, h2, p { margin: 0; }
     return { main: mix(main), learning }; // in random mode, a different order every time a session starts
   }
 
+  // the first batch of someone who has never studied shows a hand on the cards: tap the first one to turn it; on a
+  // turned card with coloured examples, the «Aa» button that changes their colours («Entendido» or the button itself
+  // goes on); then swipe it (right: I know it, left: I don't, up: again soon). Once per device (seen when the first
+  // card is sent); a guest, who starts from nothing each visit, gets it in the first deck opened in each visit.
+  // sess.tuto: the steps still to show ({ swipe, colors }), or null
+  const TUTORIAL_KEY = 'flaxcards.tutorial';
+  function tutorialSeen() {
+    try {
+      return localStorage.getItem(TUTORIAL_KEY) === '1';
+    } catch (e) {
+      return true; // no storage: better never than every time
+    }
+  }
+  function tutorialStep(step) {
+    if (!sess || !sess.tuto || !sess.tuto[step]) return;
+    sess.tuto[step] = false;
+    if (step === 'swipe') {
+      try {
+        localStorage.setItem(TUTORIAL_KEY, '1');
+      } catch (e) {
+        /* it would only be shown again */
+      }
+    }
+    if (!sess.tuto.swipe && !sess.tuto.colors) sess.tuto = null;
+  }
+  function tutorialHtml(back, c) {
+    const t = sess.tuto;
+    if (!t) return '';
+    const hand = '<span class="tuto-hand" aria-hidden="true"><i class="tuto-ripple"></i>👆</span>';
+    if (back && t.colors && hasPairs(c)) {
+      return `<div class="tuto is-colors">${hand}<div class="tuto-tip" role="status"><p>${tr('Con el botón <b>Aa</b> cambias cómo se ven las parejas de palabras de los ejemplos: sin colores, con la letra de color o con el fondo de color. También está en Ajustes.', 'The <b>Aa</b> button changes how the word pairs of the examples look: no colours, coloured letters or a coloured background. It is in Settings too.')}</p><button class="btn btn-sm" type="button" data-act="tuto-ok">${tr('Entendido', 'Got it')}</button></div></div>`;
+    }
+    if (!t.swipe || (!back && sess.seen)) return ''; // tapping is shown on the first card only
+    const tip = back
+      ? tr('Desliza la tarjeta: a la derecha si te la sabías, a la izquierda si no, y hacia arriba para repasarla dentro de un rato. También tienes los botones de abajo.', 'Swipe the card: right if you knew it, left if you didn’t, and up to see it again in a while. The buttons below do the same.')
+      : tr('Toca la tarjeta para darle la vuelta y ver la respuesta.', 'Tap the card to turn it over and see the answer.');
+    return `<div class="tuto ${back ? 'is-swipe' : 'is-tap'}">${hand}<p class="tuto-tip" role="status">${tip}</p></div>`;
+  }
+
   function startSession(scope) {
     const { main, learning } = planBatch(scope);
     // seen: cards answered in this batch (its progress bar; the batch ends when they reach its size)
     // backs: the words that already came back once in this batch after a miss
     sess = { scope, main, learning, backs: new Set(), history: [], seen: 0, again: 0, current: null, revealed: false, flipped: false, newKnown: 0, reviewsOk: 0, flash: null };
+    sess.tuto = !Object.keys(S.cards).length && (isGuest() || !tutorialSeen()) ? { swipe: true, colors: true } : null;
     sess.current = pickNext();
     go(sess.current ? 'study' : 'done');
   }
@@ -3501,14 +3570,33 @@ h1, h2, p { margin: 0; }
       </div>`;
   }
 
+  // the days the daily goal of words was met (the words learned that day in every language and level, against
+  // today's goal) and the times it was met 7 days in a row (a run of 14 is two)
+  function goalTally(byDay) {
+    const met = [...byDay].filter(([, n]) => n >= S.settings.dailyGoal).map(([day]) => day).sort((a, b) => a - b);
+    let weeks = 0;
+    let run = 0;
+    met.forEach((day, i) => {
+      run = i && day === met[i - 1] + 1 ? run + 1 : 1;
+      if (run % 7 === 0) weeks += 1;
+    });
+    return { days: met.length, weeks };
+  }
+  function goalTallyBtn(t) {
+    const label = tr(`${t.days} ${t.days === 1 ? 'día' : 'días'} con el objetivo diario cumplido y ${t.weeks} ${t.weeks === 1 ? 'vez' : 'veces'} 7 días seguidos`, `${t.days} ${t.days === 1 ? 'day' : 'days'} with the daily goal met, and ${t.weeks} ${t.weeks === 1 ? 'time' : 'times'} 7 days in a row`);
+    return `<button class="goal-tally" type="button" data-act="goal-tally" data-days="${t.days}" data-weeks="${t.weeks}" aria-label="${label}"><span class="tally is-day"><i></i>${fmtInt(t.days)}</span><span class="tally is-week"><i></i>${fmtInt(t.weeks)}</span></button>`;
+  }
+
   // start screen: the app name, the streak and one flag per language, the one with most known words first (all its
   // levels, not only the ticked ones; languages tied keep the usual order)
   function viewLangs() {
     const today = dayNum();
     const shown = curLang();
+    const byDay = new Map(); // words learned each day, every language together (for the goal tally)
     const tiles = LANGS.map((l, i) => {
       useLang(l.id); // each language with its own decks and levels: the same numbers as inside
       const known = levelProgress(curLevels()).known;
+      if (!isGuest()) for (const [day, n] of learnedByDay(LEVELS)) byDay.set(day, (byDay.get(day) || 0) + n);
       return { i, all: levelProgress(LEVELS).known, html: `<button class="lang-tile" type="button" data-act="lang" data-lang="${l.id}" aria-label="${tr(`Practicar ${l.es}`, `Practise ${l.enName}`)}">
         ${FLAGS[l.id]}
         <span class="lang-name" lang="${l.id}">${l.name}</span>
@@ -3522,7 +3610,7 @@ h1, h2, p { margin: 0; }
     useLang(shown);
     return `
     <main class="screen langs has-top">
-      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificaciones', 'Rankings')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
+      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right">${isGuest() ? '' : goalTallyBtn(goalTally(byDay))}<button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificaciones', 'Rankings')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
       <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       <section class="lang-section" aria-labelledby="h-langs">
         ${streakHero(today)}
@@ -3791,6 +3879,7 @@ h1, h2, p { margin: 0; }
           <div class="kcard-head"><span class="kcard-deck" lang="${d.lang}">${esc(d.title)}</span>${reversible(c, d) ? `<span class="kcard-dir">${dirLabel(f)}</span>` : ''}<span class="kcard-status">${status}</span>${back && hasPairs(c) ? pairBtn() : ''}</div>
           <div class="kcard-body${stripes ? ' has-stripes' : ''}">${body}</div>
         </article>
+        ${sess.tuto ? tutorialHtml(back, c) : ''}
       </div>
       <footer class="act-row">
         <button class="act act-no" type="button" data-act="throw" data-dir="left"><span aria-hidden="true">←</span> ${tr('No me la sé', 'Don’t know')}</button>
@@ -3974,6 +4063,19 @@ h1, h2, p { margin: 0; }
           </span>
         </div>
         ${reminderRow()}
+        <div class="set-group">
+          <strong>${tr('Traducción del texto', 'Translation of the text')}</strong>
+          <div class="dir-switch" role="group" aria-label="${tr('Traducción del texto', 'Translation of the text')}">
+            ${[
+              ['off', tr('Sin colores', 'No colours')],
+              ['text', tr('Letra de color', 'Coloured letters')],
+              ['bg', tr('Fondo de color', 'Coloured background')],
+            ]
+              .map(([v, t]) => `<button type="button" class="dir-opt${pairStyle() === v ? ' is-on' : ''}" data-act="pair-style" data-style="${v}" aria-pressed="${pairStyle() === v}">${t}</button>`)
+              .join('')}
+          </div>
+          <p class="pair-demo"><span lang="de">${alignedHtml('{1|Ich wohne} {2|in} {3|Madrid}.')}</span> <span lang="${uiLang()}">${alignedHtml(tr('{1|Vivo} {2|en} {3|Madrid}.', '{1|I live} {2|in} {3|Madrid}.'))}</span></p>
+        </div>
         <div class="set-group">
           <strong>${tr('Orden de las tarjetas nuevas', 'Order of new cards')}</strong>
           <div class="dir-switch" role="group" aria-label="${tr('Orden de las tarjetas nuevas', 'Order of new cards')}">
@@ -5611,6 +5713,7 @@ h1, h2, p { margin: 0; }
     if (wrap) wrap.classList.remove('is-dragging');
   }
   function swipeAction(dir) {
+    tutorialStep('swipe'); // the first card sent: that step is learnt
     if (dir === 'right') answer(3, true);
     else if (dir === 'left') answer(1, true);
     else requeue();
@@ -5896,6 +5999,13 @@ h1, h2, p { margin: 0; }
         ui.podiumsOpen = act === 'podiums';
         render();
         break;
+      case 'goal-tally': {
+        const days = Number(el.dataset.days);
+        const weeks = Number(el.dataset.weeks);
+        const goal = S.settings.dailyGoal;
+        toast(tr(`● Verde: has cumplido el objetivo diario (${goal} palabras) ${days} ${days === 1 ? 'día' : 'días'}. ● Rojo: lo has cumplido 7 días seguidos ${weeks} ${weeks === 1 ? 'vez' : 'veces'}.`, `● Green: you met the daily goal (${goal} words) on ${days} ${days === 1 ? 'day' : 'days'}. ● Red: you met it 7 days in a row ${weeks} ${weeks === 1 ? 'time' : 'times'}.`), 4500);
+        break;
+      }
       case 'comp-link-copy': {
         const site = String(COMP_CFG.site || '');
         const copied = navigator.clipboard ? navigator.clipboard.writeText(site) : Promise.reject(new Error('no clipboard'));
@@ -6031,8 +6141,13 @@ h1, h2, p { margin: 0; }
         if (el.checked) Reminder.turnOn();
         else Reminder.turnOff();
         break;
+      case 'tuto-ok':
+        tutorialStep('colors');
+        render();
+        break;
       case 'pair-style': {
         if (PAIR_STYLES.includes(el.dataset.style)) S.settings.pairStyle = el.dataset.style;
+        tutorialStep('colors'); // tried it: the tutorial's colour step is done
         saveSettings();
         const top = app.querySelector('.card-wrap')?.scrollTop; // on a card, it stays where it was read
         render();
