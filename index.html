@@ -525,8 +525,8 @@ h1, h2, p { margin: 0; }
 .streak-body { display: grid; gap: 2px; min-width: 0; }
 .streak-num { font-size: 1.0625rem; color: var(--ink-2); }
 .streak-num b { font-size: 1.75rem; color: var(--ink); margin-right: 2px; }
-.streak-best { margin-left: 4px; font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
-.streak-best::before { content: '·'; margin-right: 8px; }
+/* the best streak on its own line under the streak, without a separator */
+.streak-best { display: block; font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
 .streak-today { font-weight: 700; color: var(--ink); }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
@@ -1372,18 +1372,21 @@ h1, h2, p { margin: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
 .langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
-/* in the streak block, before the podiums of the weekly competition: 1 in a green circle = days with the daily goal
-   met, 7 in a red one = times met 7 days in a row, 30 in a gold one = times met 30 days in a row; the count next to
-   each; behind the same thin line as the podiums. A badge not reached yet: only its ring, as the podium places */
-.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink); font: 700 0.8125rem/1.2 var(--font-body); cursor: pointer; }
+/* in the streak block, before the podiums of the weekly competition and drawn like them: a target with an arrow over
+   1 in a green circle = days with the daily goal met, 7 in a red one = times met 7 days in a row, 30 in a gold one =
+   times met 30 days in a row, the count next to each; behind the same thin line as the podiums. The circles are
+   always filled; a count still at 0 is muted */
+.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: grid; align-content: center; justify-items: start; gap: 4px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); cursor: pointer; }
 .goal-tally:hover { color: var(--ink); }
+.goal-tally .target { justify-self: center; width: 24px; height: 24px; }
 .goal-tally + .podium-btn { margin-left: 0; }
-.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 5px; }
+.tally-rows { display: grid; gap: 2px; }
+.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 5px; font-size: 0.8125rem; line-height: 1.2; }
 .tally.is-week { --badge: #e03131; }
 .tally.is-month { --badge: var(--podium-1); --badge-ink: var(--podium-ink); }
 .tally i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; flex: none; background: var(--badge); color: var(--badge-ink); font: 800 0.625rem/1 var(--font-body); font-style: normal; letter-spacing: -0.02em; }
-.tally.is-zero i { background: none; box-shadow: inset 0 0 0 1.5px var(--badge); color: var(--muted); }
-.tally.is-zero { font-weight: 400; color: var(--muted); }
+.tally b { color: var(--ink); }
+.tally.is-zero b { font-weight: 400; color: var(--muted); }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
@@ -1426,7 +1429,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.37';
+  const VERSION = '5.38';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -1533,6 +1536,7 @@ h1, h2, p { margin: 0; }
     login: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
     search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>',
     // 2nd, 1st and 3rd, left to right
+    target: '<svg class="target" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.5 4.6A8.5 8.5 0 1 0 19.4 11.5"/><path d="M11 8.5A4.5 4.5 0 1 0 15.5 13"/><circle cx="11" cy="13" r="1"/><path d="M11 13l6-6"/><path d="M17 4v3h3l3-3h-3V1z"/></svg>',
     podium: '<svg class="podium" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 20.5v-8H9v-6h6v9h6.5v5z"/><path d="M9 12.5v8M15 15.5v5"/></svg>',
   };
   const LOGO = '<svg class="brand-logo" viewBox="0 0 48 34" aria-hidden="true"><rect class="lg-back lg-b3" x="17.25" y="0.75" width="29.5" height="19.5" rx="2"/><rect class="lg-back lg-b2" x="11.75" y="5.25" width="29.5" height="19.5" rx="2"/><rect class="lg-back lg-b1" x="6.25" y="9.75" width="29.5" height="19.5" rx="2"/><rect class="lg-card" x="0.75" y="13.75" width="29.5" height="19.5" rx="2"/><path class="lg-red" d="M1.6 19h27.8"/><path class="lg-blue" d="M5 24h21M5 28.5h21"/></svg>';
@@ -3501,7 +3505,7 @@ h1, h2, p { margin: 0; }
     return `<section class="streak-hero${met ? ' is-met' : ''}${locked ? ' is-locked' : ''}" aria-label="${tr(`Racha de ${streak} días; hoy ${met ? 'práctica completada' : `${doneToday} de ${goal} tarjetas`}`, `${streak}-day streak; today ${met ? 'practice done' : `${doneToday} of ${goal} cards`}`)}">
       <span class="streak-flame">${ICON.flame}</span>
       <span class="streak-body">
-        <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')} <span class="streak-best">${tr('mejor racha', 'best streak')} ${fmtInt(best)}</span></span>
+        <span class="streak-num"><b>${fmtInt(streak)}</b> ${streak === 1 ? tr('día de racha', 'day streak') : tr('días de racha', 'day streak')} <span class="streak-best">${tr('Mejor racha', 'Best streak')} ${fmtInt(best)}</span></span>
         <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector: ese día no suma, pero no pierdes la racha; sin protectores, vuelve a 0. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up: that day adds nothing, but you keep your streak; with no shields, it goes back to 0. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
       </span>
@@ -3591,12 +3595,13 @@ h1, h2, p { margin: 0; }
     });
     return { days: met.length, weeks, months };
   }
-  // three badges: 1 in a green circle (days), 7 in a red one (weeks), 30 in a gold one (months), each with its count
+  // a target with an arrow over three badges, as the podiums: 1 in a green circle (days), 7 in a red one (weeks),
+  // 30 in a gold one (months), each with its count
   function goalTallyBtn(t) {
     const times = (n) => (n === 1 ? tr('vez', 'time') : tr('veces', 'times'));
     const label = tr(`${t.days} ${t.days === 1 ? 'día' : 'días'} con el objetivo diario cumplido, ${t.weeks} ${times(t.weeks)} 7 días seguidos y ${t.months} ${times(t.months)} 30 días seguidos`, `${t.days} ${t.days === 1 ? 'day' : 'days'} with the daily goal met, ${t.weeks} ${times(t.weeks)} 7 days in a row and ${t.months} ${times(t.months)} 30 days in a row`);
-    const badge = (cls, mark, n) => `<span class="tally ${cls}${n ? '' : ' is-zero'}"><i>${mark}</i>${fmtInt(n)}</span>`;
-    return `<button class="goal-tally" type="button" data-act="goal-tally" data-days="${t.days}" data-weeks="${t.weeks}" data-months="${t.months}" aria-label="${label}">${badge('is-day', 1, t.days)}${badge('is-week', 7, t.weeks)}${badge('is-month', 30, t.months)}</button>`;
+    const badge = (cls, mark, n) => `<span class="tally ${cls}${n ? '' : ' is-zero'}"><i>${mark}</i><b>${fmtInt(n)}</b></span>`;
+    return `<button class="goal-tally" type="button" data-act="goal-tally" data-days="${t.days}" data-weeks="${t.weeks}" data-months="${t.months}" title="${tr('Tu objetivo diario', 'Your daily goal')}" aria-label="${label}">${ICON.target}<span class="tally-rows">${badge('is-day', 1, t.days)}${badge('is-week', 7, t.weeks)}${badge('is-month', 30, t.months)}</span></button>`;
   }
 
   // start screen: the app name, the streak and one flag per language, the one with most known words first (all its

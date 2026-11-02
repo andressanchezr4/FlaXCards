@@ -522,8 +522,8 @@ h1, h2, p { margin: 0; }
 .streak-body { display: grid; gap: 2px; min-width: 0; }
 .streak-num { font-size: 1.0625rem; color: var(--ink-2); }
 .streak-num b { font-size: 1.75rem; color: var(--ink); margin-right: 2px; }
-.streak-best { margin-left: 4px; font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
-.streak-best::before { content: '·'; margin-right: 8px; }
+/* the best streak on its own line under the streak, without a separator */
+.streak-best { display: block; font-size: 0.875rem; color: var(--muted); white-space: nowrap; }
 .streak-today { font-weight: 700; color: var(--ink); }
 .streak-hero.is-met .streak-today { color: #c92a2a; }
 .streak-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
@@ -1369,18 +1369,21 @@ h1, h2, p { margin: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
 .langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
-/* in the streak block, before the podiums of the weekly competition: 1 in a green circle = days with the daily goal
-   met, 7 in a red one = times met 7 days in a row, 30 in a gold one = times met 30 days in a row; the count next to
-   each; behind the same thin line as the podiums. A badge not reached yet: only its ring, as the podium places */
-.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink); font: 700 0.8125rem/1.2 var(--font-body); cursor: pointer; }
+/* in the streak block, before the podiums of the weekly competition and drawn like them: a target with an arrow over
+   1 in a green circle = days with the daily goal met, 7 in a red one = times met 7 days in a row, 30 in a gold one =
+   times met 30 days in a row, the count next to each; behind the same thin line as the podiums. The circles are
+   always filled; a count still at 0 is muted */
+.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: grid; align-content: center; justify-items: start; gap: 4px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); cursor: pointer; }
 .goal-tally:hover { color: var(--ink); }
+.goal-tally .target { justify-self: center; width: 24px; height: 24px; }
 .goal-tally + .podium-btn { margin-left: 0; }
-.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 5px; }
+.tally-rows { display: grid; gap: 2px; }
+.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 5px; font-size: 0.8125rem; line-height: 1.2; }
 .tally.is-week { --badge: #e03131; }
 .tally.is-month { --badge: var(--podium-1); --badge-ink: var(--podium-ink); }
 .tally i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; flex: none; background: var(--badge); color: var(--badge-ink); font: 800 0.625rem/1 var(--font-body); font-style: normal; letter-spacing: -0.02em; }
-.tally.is-zero i { background: none; box-shadow: inset 0 0 0 1.5px var(--badge); color: var(--muted); }
-.tally.is-zero { font-weight: 400; color: var(--muted); }
+.tally b { color: var(--ink); }
+.tally.is-zero b { font-weight: 400; color: var(--muted); }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
