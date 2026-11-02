@@ -1372,15 +1372,18 @@ h1, h2, p { margin: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
 .langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
-/* in the streak block, before the podiums of the weekly competition: green dot = days with the daily goal met, red
-   dot = times met 7 days in a row; behind the same thin line as the podiums */
-.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: inline-flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); font: 700 0.8125rem/1 var(--font-body); cursor: pointer; }
+/* in the streak block, before the podiums of the weekly competition: 1 in a green circle = days with the daily goal
+   met, 7 in a red one = times met 7 days in a row, 30 in a gold one = times met 30 days in a row; the count next to
+   each; behind the same thin line as the podiums. A badge not reached yet: only its ring, as the podium places */
+.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink); font: 700 0.8125rem/1.2 var(--font-body); cursor: pointer; }
 .goal-tally:hover { color: var(--ink); }
 .goal-tally + .podium-btn { margin-left: 0; }
-.tally { display: inline-flex; align-items: center; gap: 5px; }
-.tally i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.tally.is-day i { background: #2f9e44; }
-.tally.is-week i { background: #e03131; }
+.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 5px; }
+.tally.is-week { --badge: #e03131; }
+.tally.is-month { --badge: var(--podium-1); --badge-ink: var(--podium-ink); }
+.tally i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; flex: none; background: var(--badge); color: var(--badge-ink); font: 800 0.625rem/1 var(--font-body); font-style: normal; letter-spacing: -0.02em; }
+.tally.is-zero i { background: none; box-shadow: inset 0 0 0 1.5px var(--badge); color: var(--muted); }
+.tally.is-zero { font-weight: 400; color: var(--muted); }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
 .ui-langs { display: flex; justify-content: center; gap: 10px; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
@@ -1423,7 +1426,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.36';
+  const VERSION = '5.37';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3486,7 +3489,7 @@ h1, h2, p { margin: 0; }
   // the streak (STREAK_MIN cards answered) and red after it
   // a part only for accounts, as a guest sees it: dimmed, with this note on top
   const lockedNote = () => `<span class="locked-note">${tr('Disponible solo para usuarios con cuenta', 'Available only to users with an account')}</span>`;
-  // tally: the goal tally of goalTally() (green and red dots), shown before the podiums of the weekly competition
+  // tally: the goal tally of goalTally() (green 1, red 7 and gold 30), shown before the podiums of the weekly competition
   function streakHero(today, tally) {
     const locked = isGuest(); // a guest has no streak: 0
     const streak = locked ? 0 : streakDays(today);
@@ -3574,20 +3577,26 @@ h1, h2, p { margin: 0; }
   }
 
   // the days the daily goal of words was met (the words learned that day in every language and level, against
-  // today's goal) and the times it was met 7 days in a row (a run of 14 is two)
+  // today's goal) and the times it was met 7 and 30 days in a row (a run of 14 is two weeks; a run of 30, four weeks
+  // and one month)
   function goalTally(byDay) {
     const met = [...byDay].filter(([, n]) => n >= S.settings.dailyGoal).map(([day]) => day).sort((a, b) => a - b);
     let weeks = 0;
+    let months = 0;
     let run = 0;
     met.forEach((day, i) => {
       run = i && day === met[i - 1] + 1 ? run + 1 : 1;
       if (run % 7 === 0) weeks += 1;
+      if (run % 30 === 0) months += 1;
     });
-    return { days: met.length, weeks };
+    return { days: met.length, weeks, months };
   }
+  // three badges: 1 in a green circle (days), 7 in a red one (weeks), 30 in a gold one (months), each with its count
   function goalTallyBtn(t) {
-    const label = tr(`${t.days} ${t.days === 1 ? 'día' : 'días'} con el objetivo diario cumplido y ${t.weeks} ${t.weeks === 1 ? 'vez' : 'veces'} 7 días seguidos`, `${t.days} ${t.days === 1 ? 'day' : 'days'} with the daily goal met, and ${t.weeks} ${t.weeks === 1 ? 'time' : 'times'} 7 days in a row`);
-    return `<button class="goal-tally" type="button" data-act="goal-tally" data-days="${t.days}" data-weeks="${t.weeks}" aria-label="${label}"><span class="tally is-day"><i></i>${fmtInt(t.days)}</span><span class="tally is-week"><i></i>${fmtInt(t.weeks)}</span></button>`;
+    const times = (n) => (n === 1 ? tr('vez', 'time') : tr('veces', 'times'));
+    const label = tr(`${t.days} ${t.days === 1 ? 'día' : 'días'} con el objetivo diario cumplido, ${t.weeks} ${times(t.weeks)} 7 días seguidos y ${t.months} ${times(t.months)} 30 días seguidos`, `${t.days} ${t.days === 1 ? 'day' : 'days'} with the daily goal met, ${t.weeks} ${times(t.weeks)} 7 days in a row and ${t.months} ${times(t.months)} 30 days in a row`);
+    const badge = (cls, mark, n) => `<span class="tally ${cls}${n ? '' : ' is-zero'}"><i>${mark}</i>${fmtInt(n)}</span>`;
+    return `<button class="goal-tally" type="button" data-act="goal-tally" data-days="${t.days}" data-weeks="${t.weeks}" data-months="${t.months}" aria-label="${label}">${badge('is-day', 1, t.days)}${badge('is-week', 7, t.weeks)}${badge('is-month', 30, t.months)}</button>`;
   }
 
   // start screen: the app name, the streak and one flag per language, the one with most known words first (all its
@@ -6005,8 +6014,10 @@ h1, h2, p { margin: 0; }
       case 'goal-tally': {
         const days = Number(el.dataset.days);
         const weeks = Number(el.dataset.weeks);
+        const months = Number(el.dataset.months);
         const goal = S.settings.dailyGoal;
-        toast(tr(`● Verde: has cumplido el objetivo diario (${goal} palabras) ${days} ${days === 1 ? 'día' : 'días'}. ● Rojo: lo has cumplido 7 días seguidos ${weeks} ${weeks === 1 ? 'vez' : 'veces'}.`, `● Green: you met the daily goal (${goal} words) on ${days} ${days === 1 ? 'day' : 'days'}. ● Red: you met it 7 days in a row ${weeks} ${weeks === 1 ? 'time' : 'times'}.`), 4500);
+        const times = (n) => (n === 1 ? tr('vez', 'time') : tr('veces', 'times'));
+        toast(tr(`(1) Verde: has cumplido el objetivo diario (${goal} palabras) ${days} ${days === 1 ? 'día' : 'días'}. (7) Rojo: lo has cumplido 7 días seguidos ${weeks} ${times(weeks)}. (30) Dorado: lo has cumplido 30 días seguidos ${months} ${times(months)}.`, `(1) Green: you met the daily goal (${goal} words) on ${days} ${days === 1 ? 'day' : 'days'}. (7) Red: you met it 7 days in a row ${weeks} ${times(weeks)}. (30) Gold: you met it 30 days in a row ${months} ${times(months)}.`), 6000);
         break;
       }
       case 'comp-link-copy': {
