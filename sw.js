@@ -1,6 +1,6 @@
 // Service worker for the installable version: the app works offline after the first visit.
-// The build replaces 39ada9c7f4 with a hash of the page, so every new version gets a fresh cache.
-const CACHE = 'karteikasten-39ada9c7f4';
+// The build replaces a1230d5acc with a hash of the page, so every new version gets a fresh cache.
+const CACHE = 'karteikasten-a1230d5acc';
 const FONTS = 'kk-fonts';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 
@@ -73,4 +73,38 @@ self.addEventListener('fetch', (event) => {
       })
     );
   }
+});
+
+// the daily reminder (Ajustes › Recordatorio diario): the server sends {body, lang} when the day's goal is not met
+// yet at the hour chosen (competition/supabase/functions/send-reminders). A push must always show a notification.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { body: event.data ? event.data.text() : '' };
+  }
+  const en = data.lang === 'en';
+  const icon = new URL('icons/icon-192.png', self.registration.scope).href;
+  event.waitUntil(
+    self.registration.showNotification('FlaXCards', {
+      body: String(data.body || (en ? 'Time for your words of the day!' : '¡Te esperan tus palabras de hoy!')).slice(0, 300),
+      lang: en ? 'en' : 'es',
+      icon,
+      badge: icon,
+      tag: 'flaxcards-reminder', // a newer reminder replaces the one still showing
+    })
+  );
+});
+
+// tapping it: the app if it is already open, else a new window of it
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const scope = self.registration.scope;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => c.url.startsWith(scope) && 'focus' in c);
+      return open ? open.focus() : self.clients.openWindow(scope);
+    })
+  );
 });

@@ -418,6 +418,10 @@ h1, h2, p { margin: 0; }
 .level:hover:not(.is-on) { background: var(--paper); }
 .level.is-on { background: var(--accent); color: var(--accent-ink); box-shadow: var(--shadow); }
 .level-name { font: 700 1.5rem/1 var(--font-display); letter-spacing: 0.02em; }
+/* Chinese: a small "HSK" over the number, "3–4" a little smaller */
+.level-pre { font: 700 0.6875rem/1 var(--font-display); letter-spacing: 0.08em; opacity: 0.75; }
+.level-name.is-range { font-size: 1.15rem; line-height: 1.3; white-space: nowrap; }
+.levels-sm .level-name.is-range { font-size: 0.85rem; }
 .level-sub { font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .level-badge {
   display: inline-block;
@@ -718,6 +722,11 @@ h1, h2, p { margin: 0; }
 .set-list > * + * { border-top: 2px solid var(--line); }
 .set-list > :first-child { padding-top: 2px; }
 .set-list > :last-child { padding-bottom: 2px; }
+/* Ajustes › Recordatorio diario: the switch, and the hour under it */
+.remind { gap: 12px; }
+.remind .set-row > span:first-child { color: var(--ink-2); }
+.remind-hour { flex: none; min-width: 92px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-2); font-variant-numeric: tabular-nums; }
+.switch-row input[type="checkbox"]:disabled, .remind-hour:disabled { opacity: 0.5; cursor: default; }
 .check-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .check-row input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
 .field { display: grid; gap: 6px; }
@@ -783,6 +792,8 @@ h1, h2, p { margin: 0; }
 .kcard.g-f { background-color: var(--card-f); }
 .kcard.g-n { background-color: var(--card-n); }
 .kcard.g-pl { background-color: var(--card-pl); }
+/* a card in a gender colour (or split in gender stripes) has no ruled lines */
+.kcard.g-m, .kcard.g-f, .kcard.g-n, .kcard.g-pl, .kcard:has(.stripes) { background-image: none; }
 .kcard.g-m .kcard-head, .kcard.g-f .kcard-head, .kcard.g-n .kcard-head, .kcard.g-pl .kcard-head { background: transparent; }
 .kcard.g-m .noun, .kcard.g-f .noun, .kcard.g-n .noun, .kcard.g-pl .noun { background: transparent; }
 /* swiping: the card follows the finger, then flies out */
@@ -1041,6 +1052,10 @@ h1, h2, p { margin: 0; }
 
 /* ---------- footer, toast ---------- */
 .foot { display: grid; gap: 4px; font-size: 0.8125rem; color: var(--muted); text-align: center; }
+/* the foot of a language's home: where its cards come from */
+.foot.about-decks { gap: 8px; line-height: 1.45; text-align: left; }
+.foot.about-decks p { margin: 0; }
+.foot.about-decks .hint { font-size: inherit; color: inherit; }
 .toast {
   position: fixed;
   left: 50%;
@@ -1158,6 +1173,12 @@ h1, h2, p { margin: 0; }
 .comp-badge.is-counted { background: var(--met-bg); color: var(--met-ink); }
 .comp-badge.is-practice { background: var(--paper-2); color: var(--ink-2); border: 1px solid var(--line); }
 .btn small { display: block; font-weight: 400; font-size: 0.8125rem; opacity: 0.85; }
+/* the ranked games left today, as a fraction beside the words: the number big over a short bar and the day's games
+   small; less padding so the button keeps its usual height */
+.btn.comp-ranked { gap: 12px; padding-block: 5px; }
+.comp-frac { display: inline-grid; justify-items: center; font-variant-numeric: tabular-nums; }
+.comp-frac-n { min-width: 1.25em; padding: 0 2px 2px; border-bottom: 2px solid currentColor; font: 700 1.375rem/1 var(--font-display); text-align: center; }
+.comp-frac-d { padding-top: 2px; font: 600 0.75rem/1 var(--font-display); opacity: 0.85; }
 .board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .board { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .board-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; }
@@ -1285,11 +1306,13 @@ h1, h2, p { margin: 0; }
 .theme-btn .half { fill: currentColor; stroke: none; }
 
 /* examples with their word-by-word pairs: a word or group and its equivalent share a soft marker colour */
-:root { --al-1: #fde68a; --al-2: #bfdbfe; --al-3: #bbf7d0; --al-4: #fbcfe8; --al-5: #ddd6fe; }
+/* the same hue for each pair as the coloured letters below (amber, violet, green, blue, pink: an order whose
+   neighbours stay apart for colour-blind readers), so both styles read the same */
+:root { --al-1: #fde68a; --al-2: #ddd6fe; --al-3: #bbf7d0; --al-4: #bfdbfe; --al-5: #fbcfe8; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --al-1: #5c4813; --al-2: #1e3a5f; --al-3: #1d4d33; --al-4: #5b2340; --al-5: #3b2f6b; }
+  :root:not([data-theme="light"]) { --al-1: #5c4813; --al-2: #3b2f6b; --al-3: #1d4d33; --al-4: #1e3a5f; --al-5: #5b2340; }
 }
-:root[data-theme="dark"] { --al-1: #5c4813; --al-2: #1e3a5f; --al-3: #1d4d33; --al-4: #5b2340; --al-5: #3b2f6b; }
+:root[data-theme="dark"] { --al-1: #5c4813; --al-2: #3b2f6b; --al-3: #1d4d33; --al-4: #1e3a5f; --al-5: #5b2340; }
 .al { padding: 1px 3px; border-radius: 4px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .al-1 { background: var(--al-1); }
 .al-2 { background: var(--al-2); }
@@ -1312,12 +1335,11 @@ h1, h2, p { margin: 0; }
 .al-text.al-5, .ex-es .al-text.al-5 { color: var(--alt-5); }
 .pair-demo { display: block; margin-top: 4px; font-size: 0.9375rem; text-align: center; }
 .pair-demo > span { display: block; }
-/* the same choice, small, at the foot of a card turned over */
-.pair-pick { align-self: center; display: inline-flex; gap: 2px; margin: 0 0 12px; padding: 3px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; }
-.pair-opt { min-height: 28px; padding: 2px 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ink-2); font: 700 0.75rem/1 var(--font-body); cursor: pointer; }
-.pair-opt.is-on { background: var(--paper); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.pair-opt .al { padding: 1px 4px; }
-.pair-opt .al-text { padding: 0; }
+/* the same choice on a card turned over: one button at the top right that goes round the three, showing the one
+   in use ("Aa" plain, in coloured letters or on coloured backgrounds) */
+.pair-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 1px; width: 36px; height: 30px; margin: -4px -6px -4px 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-2); color: var(--ink-2); font: 700 0.9375rem/1 var(--font-body); cursor: pointer; }
+.pair-btn .al { padding: 1px 2px; border-radius: 3px; }
+.pair-btn .al-text { padding: 0; }
 
 /* two languages per row; the app language (flags) and light/dark at the top left of the languages screen */
 .lang-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
@@ -1330,13 +1352,40 @@ h1, h2, p { margin: 0; }
 .ui-lang { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 700 0.9375rem var(--font-body); cursor: pointer; }
 .ui-lang.is-on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); color: var(--ink); }
 
+/* the player's podiums in the weekly competition, at the right of the streak: 1st, 2nd and 3rd in gold, silver and
+   bronze with the times next to each; the sheet has them per language. Dark digits on the medal colours in both modes */
+:root { --podium-1: #f0c445; --podium-2: #c9d1db; --podium-3: #e3a26a; --podium-ink: #1d2430; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --podium-1: #dcae2e; --podium-2: #a5b0bd; --podium-3: #c8854d; --podium-ink: #12161c; }
+}
+:root[data-theme="dark"] { --podium-1: #dcae2e; --podium-2: #a5b0bd; --podium-3: #c8854d; --podium-ink: #12161c; }
+.podium-btn { flex: none; align-self: stretch; margin-left: auto; display: grid; align-content: center; justify-items: start; gap: 4px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); }
+.podium-btn:hover { color: var(--ink); }
+.podium-btn .podium { justify-self: center; width: 24px; height: 24px; }
+.podium-btn .podium-places { display: grid; gap: 2px; }
+.podium-place { --medal: var(--podium-1); display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.podium-place.p2 { --medal: var(--podium-2); }
+.podium-place.p3 { --medal: var(--podium-3); }
+.podium-place i { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: var(--medal); color: var(--podium-ink); font: 700 0.625rem/1 var(--font-body); }
+.podium-place b { color: var(--ink); }
+/* a place not reached yet: only the ring of its medal */
+.podium-place.is-zero i { background: none; box-shadow: inset 0 0 0 1.5px var(--medal); color: var(--muted); }
+.podium-place.is-zero b { font-weight: 400; color: var(--muted); }
+.podium-title { display: flex; align-items: center; gap: 8px; }
+.podium-langs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.podium-langs li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.podium-langs .podium-places { display: inline-flex; gap: 14px; }
+.podium-langs .podium-place { font-size: 0.9375rem; }
+.podium-langs .podium-place b { min-width: 2ch; }
+.podium-langs .podium-total { border-bottom: 0; padding-bottom: 0; font-weight: 700; }
+
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
 <div id="toast" class="toast" role="status" hidden></div>
-<script type="application/json" id="competition-config">{"url":"https://xfsgqetssmltgtzgozbe.supabase.co","anonKey":"sb_publishable_6LLGUoD4gSHhRigaDgKmXQ_NNPPYSb_","site":"https://andressanchezr4.github.io/FlaXCards/"}</script>
+<script type="application/json" id="competition-config">{"url":"https://xfsgqetssmltgtzgozbe.supabase.co","anonKey":"sb_publishable_6LLGUoD4gSHhRigaDgKmXQ_NNPPYSb_","site":"https://andressanchezr4.github.io/FlaXCards/","vapidPublicKey":"BJL7JpATuLRLTCZHcjXbeDXMbVXe2srTIhe3Z5gZuCXX-XBnJAzqtSsbevlt6XBjy_0Y_pcOrM6MjLad_Us4DWk"}</script>
 <script>
 /* FlaXCards · Competición semanal on its own page (dist/competicion/). The claude.ai copy of the app cannot reach
    outside servers, so the competition also lives here: the same code as inside the app (competition.js, inlined
@@ -1399,8 +1448,8 @@ h1, h2, p { margin: 0; }
   // Quizzes of 10 vocabulary questions. Competitive games add points to a weekly world ranking (Monday to Sunday,
   // Europe/Madrid); practice games do not. Everything that decides the result lives on the server (see the
   // competition/ folder): the questions, which answer is right, the score, the daily limit and the ranking. The
-  // app only shows the questions and sends what was written (or, in Chinese, the options chosen): a written game
-  // never gets the options. The connection data come from the build
+  // app only shows the questions and sends what was written (or, in a multiple-choice game, the options chosen): a
+  // written game never gets the options. The connection data come from the build
   // (competition/config.json); without them this part says what is missing.
   const COMP_CFG = (() => {
     try {
@@ -1417,7 +1466,7 @@ h1, h2, p { margin: 0; }
   // anything else, the browser would not run it (it could read the session)
   const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.50.0/dist/umd/supabase.js';
   const SUPABASE_JS_SRI = 'sha384-K0oxqktRvaThvYgGL4G+OK2Ih6VS6Uyu7j3+7WJgp/uWM0Yv6Xi4YEiw0BB+mPfi';
-  // hint: what a written answer must have (Chinese is multiple choice)
+  // hint: what a written answer must have (Chinese and Latin are multiple choice)
   const COMP_LANGUAGES = {
     de: { name: ['Alemán', 'German'], prompt: ['¿Cómo se dice en alemán?', 'How do you say it in German?'], hint: ['Los nombres, con su artículo (der, die, das); los verbos, en infinitivo.', 'Nouns with their article (der, die, das); verbs in the infinitive.'] },
     en: { name: ['Inglés', 'English'], prompt: ['¿Cómo se dice en inglés?', 'How do you say it in English?'], hint: ['Los verbos, en infinitivo (con «to» o sin él).', 'Verbs in the infinitive (with or without “to”).'] },
@@ -1426,6 +1475,7 @@ h1, h2, p { margin: 0; }
     pt: { name: ['Portugués', 'Portuguese'], prompt: ['¿Cómo se dice en portugués?', 'How do you say it in Portuguese?'], hint: ['Los nombres, con su artículo (o, a, os, as); los verbos, en infinitivo.', 'Nouns with their article (o, a, os, as); verbs in the infinitive.'] },
     ca: { name: ['Catalán', 'Catalan'], prompt: ['¿Cómo se dice en catalán?', 'How do you say it in Catalan?'], hint: ['Los nombres, con su artículo (el, la, l’…); los verbos, en infinitivo.', 'Nouns with their article (el, la, l’…); verbs in the infinitive.'] },
     zh: { name: ['Chino', 'Chinese'], prompt: ['¿Cómo se dice en chino?', 'How do you say it in Chinese?'] },
+    la: { name: ['Latín', 'Latin'], prompt: ['¿Cómo se dice en latín?', 'How do you say it in Latin?'] },
   };
   const compValidLanguage = (language) => Object.hasOwn(COMP_LANGUAGES, language);
   const compPendingLanguages = new Set(); // a server may support earlier languages before a newly added one
@@ -1844,9 +1894,39 @@ h1, h2, p { margin: 0; }
   }
   // the levels ticked in the app for the language of the competition (on its own page: all of them)
   const compLevels = () => (!COMP_ALONE && comp.language === curLang() ? curLevels() : null);
+  // written answer or multiple choice, chosen for each language and kept on this device (also on the competition's
+  // own page, which has no study settings)
+  const COMP_FORMATS_KEY = 'flaxcards.competition.formats';
+  const compChosenFormats = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(COMP_FORMATS_KEY) || '{}');
+      return saved && typeof saved === 'object' ? saved : {};
+    } catch (e) {
+      return {}; // written, as before
+    }
+  })();
+  // the format of the next game where the server offers both (the written languages); null: nothing to choose
+  // (Chinese and Latin are only multiple choice, and a server from before the formats only has written games there)
+  function compFormat() {
+    const offered = comp.status?.rules?.formats || [];
+    if (offered.length < 2) return null;
+    const chosen = compChosenFormats[comp.language];
+    return offered.includes(chosen) ? chosen : 'typed';
+  }
+  function compSetFormat(format) {
+    if (format !== 'typed' && format !== 'choice') return;
+    compChosenFormats[comp.language] = format;
+    try {
+      localStorage.setItem(COMP_FORMATS_KEY, JSON.stringify(compChosenFormats));
+    } catch (e) {
+      /* remembered in memory */
+    }
+    render();
+  }
   async function compPlay(mode) {
     const levels = compLevels();
-    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode, p_language: comp.language, ...(levels ? { p_levels: levels } : {}) })));
+    const format = compFormat();
+    await compStep(async () => beginGame(await rpc('quiz_start', { p_mode: mode, p_language: comp.language, ...(levels ? { p_levels: levels } : {}), ...(format ? { p_format: format } : {}) })));
   }
   async function compResume(id) {
     await compStep(async () => beginGame(await rpc('quiz_resume', { p_session: id })));
@@ -1940,6 +2020,9 @@ h1, h2, p { margin: 0; }
       grade = !r || !r.is_correct ? 'wrong' : r.almost ? 'almost' : 'right';
       answer = (r && r.correct_text) || '';
       if (grade === 'right' && r.card && !COMP_ALONE) learnedInCompetition(r.card); // new to the study: now learned
+      // every answer the server checks is a card practised today (a ranked «Saltar» too: it is a wrong answer); one
+      // already final is not sent again, so it is not counted twice
+      if (!COMP_ALONE && !(q.question_id in comp.checked)) practisedInCompetition();
     } catch (e) {
       /* sent with the rest at the end */
     }
@@ -1955,6 +2038,17 @@ h1, h2, p { margin: 0; }
   // the exact word for 2 seconds); the phone vibrates once when right and three times otherwise; the next question
   // appears as the colour fades
   const BANG = '<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="4.5" x2="12" y2="14"/><line x1="12" y1="19.2" x2="12" y2="19.3"/></svg>';
+  // the right word is also said aloud while it is on screen, as written (with its article: «die Überschwemmung»; in
+  // Chinese only the characters, not the pinyin), with the app's voice and only if words are read aloud (Ajustes).
+  // That voice is the one of the language being studied, which inside the app is the competition's; the competition's
+  // own page has no voices, and Latin has none (Speech.say says nothing). True when something was said
+  function compSay(text, language) {
+    if (COMP_ALONE || !S.settings.autoSpeak || language !== curLang()) return false;
+    const words = language === 'zh' ? text.replace(/\s*[(（][^()（）]*[)）]/g, '').trim() : text;
+    if (!words) return false;
+    Speech.say(words);
+    return true;
+  }
   function flashAnswer(grade, then, answer = '', language = '') {
     const right = grade === 'right';
     const body = app.querySelector('.quiz-body');
@@ -1978,8 +2072,13 @@ h1, h2, p { margin: 0; }
       + (!right && answer ? `<span class="quiz-flash-word" lang="${esc(language)}">${esc(answer)}</span>` : '')
       + `<span class="sr-only" role="status">${said}${!right && answer ? `: ${esc(answer)}` : ''}</span>`;
     document.body.appendChild(flash);
-    // the next question comes under the solid colour, but the keyboard only comes back once the colour is gone
-    setTimeout(() => then(false), right ? 380 : 2450);
+    const spoken = !right && answer && compSay(answer, language);
+    // the next question comes under the solid colour (a word still being said stops, so it never runs over it), but
+    // the keyboard only comes back once the colour is gone
+    setTimeout(() => {
+      if (spoken) Speech.stop();
+      then(false);
+    }, right ? 380 : 2450);
     setTimeout(() => {
       flash.remove();
       if (ui.screen === 'quiz') focusAnswer();
@@ -2067,14 +2166,32 @@ h1, h2, p { margin: 0; }
   }
 
   // the rules of a game as the server gives them: written or with options, questions, minutes and points
-  // the points of an answer, as the server gives them (written: right, almost right, wrong; Chinese: right, wrong)
-  function compRulesText(r = {}) {
+  // the points of an answer, as the server gives them (written: right, almost right, wrong; multiple choice: right,
+  // wrong), for the format chosen when the language has two
+  function compRulesText(r = {}, format = null) {
     const right = r.right || 10;
-    const wrong = String(r.wrong ?? -5).replace('-', '−');
-    return r.typed
+    const choice = format ? format === 'choice' : !r.typed;
+    const wrong = String((format === 'choice' ? r.choice_wrong : r.wrong) ?? -5).replace('-', '−');
+    return !choice
       ? tr(`Palabra acertada: +${right} · casi correcta (una letra mal): +${right / 2} · incorrecta: 0`, `Right word: +${right} · almost right (one letter wrong): +${right / 2} · wrong: 0`)
       : tr(`Palabra acertada: +${right} · incorrecta: ${wrong}`, `Right word: +${right} · wrong: ${wrong}`);
   }
+  // written answer or multiple choice for the next games, as the Estudio/Repaso switch of the language's home; both
+  // count for the same ranking (only where the language has both)
+  function compFormatSwitch(format) {
+    if (!format) return '';
+    const choice = format === 'choice';
+    return `<div class="mode">
+      <div class="dir-switch" role="group" aria-label="${tr('Tipo de respuesta', 'Answer type')}">
+        <button type="button" class="dir-opt${choice ? '' : ' is-on'}" data-act="comp-format" data-format="typed" aria-pressed="${!choice}">${tr('Respuesta escrita', 'Written answer')}</button>
+        <button type="button" class="dir-opt${choice ? ' is-on' : ''}" data-act="comp-format" data-format="choice" aria-pressed="${choice}">${tr('Opción múltiple', 'Multiple choice')}</button>
+      </div>
+    </div>`;
+  }
+  // the ranked games still to play today on their button, as a fraction: the number big over a short bar and, small,
+  // the games of a day
+  const compGamesFraction = (left, of) =>
+    `<span class="comp-frac" aria-hidden="true"><span class="comp-frac-n">${left}</span><span class="comp-frac-d">${of}</span></span><span class="sr-only">${tr(`, hoy ${left} de ${of}`, `, today ${left} of ${of}`)}</span>`;
   // the ranked games still to play today in a language (an open one included), for the colour of its «Competición
   // semanal»: null while not known; asked to the server at most once a minute
   function compGamesLeft(language) {
@@ -2129,13 +2246,15 @@ h1, h2, p { margin: 0; }
     const rows = (comp.board || [])
       .map((r) => `<li class="board-row${r.is_me ? ' is-me' : ''}"><span class="board-rank">${r.rank}</span><span class="board-name">${esc(r.username)}</span><span class="board-pts">${fmtInt(r.total_points)}</span></li>`)
       .join('');
+    const format = compFormat();
     const playBlock = current
-      ? `<div class="btn-stack">
+      ? `${compFormatSwitch(format)}
+        <div class="btn-stack">
           ${active ? `<button class="btn btn-primary" type="button" data-act="comp-resume" data-id="${esc(active.session_id)}">${tr('Continuar la partida puntuable', 'Continue the ranked game')}</button><button class="btn" type="button" data-act="comp-abandon-open" data-id="${esc(active.session_id)}">${tr('Abandonarla (no suma puntos)', 'Abandon it (no points)')}</button>` : ''}
-          ${!active && left > 0 ? `<button class="btn btn-primary" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr(`Jugar partida puntuable <small>(hoy ${left} de ${st.rules ? st.rules.daily_limit : 3})</small>`, `Play a ranked game <small>(today ${left} of ${st.rules ? st.rules.daily_limit : 3})</small>`)}</button>` : ''}
+          ${!active && left > 0 ? `<button class="btn btn-primary comp-ranked" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr('Jugar partida puntuable', 'Play a ranked game')}${compGamesFraction(left, st.rules ? st.rules.daily_limit : 3)}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
-        <p class="hint">${compRulesText(st.rules)}</p>`
+        <p class="hint">${compRulesText(st.rules, format)}</p>`
       : '';
     return `${compTop(compTitle())}
     <main class="screen">
@@ -2291,6 +2410,9 @@ h1, h2, p { margin: 0; }
         return true;
       case 'comp-play':
         compPlay(el.dataset.mode);
+        return true;
+      case 'comp-format':
+        compSetFormat(el.dataset.format);
         return true;
       case 'comp-resume':
         compResume(el.dataset.id);
