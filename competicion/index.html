@@ -1369,9 +1369,11 @@ h1, h2, p { margin: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
 .langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
-/* next to the rankings: green dot = days with the daily goal met, red dot = times met 7 days in a row */
-.goal-tally { display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; min-height: 44px; padding: 0 6px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font: 700 0.8125rem/1 var(--font-body); cursor: pointer; }
-.goal-tally:hover { background: var(--paper); }
+/* in the streak block, before the podiums of the weekly competition: green dot = days with the daily goal met, red
+   dot = times met 7 days in a row; behind the same thin line as the podiums */
+.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: inline-flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); font: 700 0.8125rem/1 var(--font-body); cursor: pointer; }
+.goal-tally:hover { color: var(--ink); }
+.goal-tally + .podium-btn { margin-left: 0; }
 .tally { display: inline-flex; align-items: center; gap: 5px; }
 .tally i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .tally.is-day i { background: #2f9e44; }

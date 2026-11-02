@@ -1372,9 +1372,11 @@ h1, h2, p { margin: 0; }
 .lang-grid .flag { width: 84px; height: 50px; }
 .langs-top { justify-content: space-between; }
 .langs-top-left, .langs-top-right { display: inline-flex; align-items: center; gap: 4px; }
-/* next to the rankings: green dot = days with the daily goal met, red dot = times met 7 days in a row */
-.goal-tally { display: inline-flex; flex-direction: column; justify-content: center; gap: 3px; min-height: 44px; padding: 0 6px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); font: 700 0.8125rem/1 var(--font-body); cursor: pointer; }
-.goal-tally:hover { background: var(--paper); }
+/* in the streak block, before the podiums of the weekly competition: green dot = days with the daily goal met, red
+   dot = times met 7 days in a row; behind the same thin line as the podiums */
+.goal-tally { flex: none; align-self: stretch; margin-left: auto; display: inline-flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); font: 700 0.8125rem/1 var(--font-body); cursor: pointer; }
+.goal-tally:hover { color: var(--ink); }
+.goal-tally + .podium-btn { margin-left: 0; }
 .tally { display: inline-flex; align-items: center; gap: 5px; }
 .tally i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .tally.is-day i { background: #2f9e44; }
@@ -1421,7 +1423,7 @@ h1, h2, p { margin: 0; }
 (() => {
   'use strict';
 
-  const VERSION = '5.35';
+  const VERSION = '5.36';
   const STORE_KEY = 'karteikasten.v1'; // kept from the first name of the app, so saved progress is not lost
   const DAY = 86400000;
   const ROLLOVER = 0; // the study day changes at midnight
@@ -3484,7 +3486,8 @@ h1, h2, p { margin: 0; }
   // the streak (STREAK_MIN cards answered) and red after it
   // a part only for accounts, as a guest sees it: dimmed, with this note on top
   const lockedNote = () => `<span class="locked-note">${tr('Disponible solo para usuarios con cuenta', 'Available only to users with an account')}</span>`;
-  function streakHero(today) {
+  // tally: the goal tally of goalTally() (green and red dots), shown before the podiums of the weekly competition
+  function streakHero(today, tally) {
     const locked = isGuest(); // a guest has no streak: 0
     const streak = locked ? 0 : streakDays(today);
     const best = locked ? 0 : Math.max(streak, bestStreak());
@@ -3499,7 +3502,7 @@ h1, h2, p { margin: 0; }
         <span class="streak-meta" title="${tr(`Un día cuenta para la racha cuando respondes al menos ${STREAK_MIN} tarjetas, de cualquier idioma. Si un día no estudias, se gasta un protector: ese día no suma, pero no pierdes la racha; sin protectores, vuelve a 0. Empiezas con 2 y ganas 1 cada ${SHIELD_EVERY} días seguidos estudiando (máximo ${MAX_SHIELDS}).`, `A day counts for your streak once you answer at least ${STREAK_MIN} cards, in any language. If you miss a day, a shield is used up: that day adds nothing, but you keep your streak; with no shields, it goes back to 0. You start with 2 and earn 1 for every ${SHIELD_EVERY} days in a row you study (${MAX_SHIELDS} at most).`)}">${ICON.shield}${fmtInt(shields)} ${shields === 1 ? tr('protector', 'shield') : tr('protectores', 'shields')}</span>
         <span class="streak-today">${met ? tr('¡Práctica de hoy completada!', 'Today’s practice is done!') : tr(`Hoy: ${fmtInt(doneToday)} de ${fmtInt(goal)} tarjetas`, `Today: ${fmtInt(doneToday)} of ${fmtInt(goal)} cards`)}</span>
       </span>
-      ${locked ? '' : podiumBadge()}
+      ${locked || !tally ? '' : goalTallyBtn(tally)}${locked ? '' : podiumBadge()}
       ${locked ? lockedNote() : ''}
     </section>`;
   }
@@ -3610,10 +3613,10 @@ h1, h2, p { margin: 0; }
     useLang(shown);
     return `
     <main class="screen langs has-top">
-      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right">${isGuest() ? '' : goalTallyBtn(goalTally(byDay))}<button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificaciones', 'Rankings')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
+      <div class="langs-top"><span class="langs-top-left"><button class="icon-btn ui-flag-btn" type="button" data-act="ui-lang" data-ui="${uiLang() === 'es' ? 'en' : 'es'}" aria-label="${tr('Idioma de la aplicación: español. Cambiar a inglés', 'App language: English. Switch to Spanish')}">${UI_FLAGS[uiLang()]}</button>${themeBtn()}</span><span class="langs-top-right"><button class="icon-btn" type="button" data-act="streak-board" aria-label="${tr('Clasificaciones', 'Rankings')}">${ICON.trophy}</button><button class="icon-btn" type="button" data-act="settings" aria-label="${tr('Ajustes', 'Settings')}">${ICON.gear}</button></span></div>
       <div class="langs-brand">${LOGO}<h1 class="brand-name">FlaXCards</h1><p class="brand-sub">${tr('Tarjetas para aprender idiomas', 'Flashcards for learning languages')}</p></div>
       <section class="lang-section" aria-labelledby="h-langs">
-        ${streakHero(today)}
+        ${streakHero(today, isGuest() ? null : goalTally(byDay))}
         <h2 class="langs-hello" id="h-langs">${tr(`Hola${accountName() ? ` ${esc(accountName())}` : ''}, ¿qué idioma quieres aprender hoy?`, `Hi${accountName() ? ` ${esc(accountName())}` : ''}, which language would you like to learn today?`)}</h2>
         <div class="lang-grid">${tiles}</div>
       </section>
