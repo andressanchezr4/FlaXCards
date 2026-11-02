@@ -1195,12 +1195,6 @@ h1, h2, p { margin: 0; }
 .comp-badge.is-counted { background: var(--met-bg); color: var(--met-ink); }
 .comp-badge.is-practice { background: var(--paper-2); color: var(--ink-2); border: 1px solid var(--line); }
 .btn small { display: block; font-weight: 400; font-size: 0.8125rem; opacity: 0.85; }
-/* the ranked games left today, as a fraction beside the words: the number big over a short bar and the day's games
-   small; less padding so the button keeps its usual height */
-.btn.comp-ranked { gap: 12px; padding-block: 5px; }
-.comp-frac { display: inline-grid; justify-items: center; font-variant-numeric: tabular-nums; }
-.comp-frac-n { min-width: 1.25em; padding: 0 2px 2px; border-bottom: 2px solid currentColor; font: 700 1.375rem/1 var(--font-display); text-align: center; }
-.comp-frac-d { padding-top: 2px; font: 600 0.75rem/1 var(--font-display); opacity: 0.85; }
 .board-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .board { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .board-row { display: grid; grid-template-columns: 2.5rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; }
@@ -1375,13 +1369,15 @@ h1, h2, p { margin: 0; }
    always filled; a count still at 0 is muted */
 .goal-tally { flex: none; align-self: stretch; margin-left: auto; display: grid; align-content: center; justify-items: start; gap: 4px; padding: 0 0 0 12px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--ink-2); cursor: pointer; }
 .goal-tally:hover { color: var(--ink); }
-.goal-tally .target { justify-self: center; width: 24px; height: 24px; }
+/* a little smaller than the podium, which fills less of its box, in the same 24px slot: both icons look the same size
+   and sit at the same height */
+.goal-tally .target { justify-self: center; width: 20px; height: 20px; margin-block: 2px; stroke-width: 2.4; }
 .goal-tally + .podium-btn { margin-left: 0; }
 .tally-rows { display: grid; gap: 2px; }
-.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 5px; font-size: 0.8125rem; line-height: 1.2; }
+.tally { --badge: #2f9e44; --badge-ink: #fff; display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; line-height: 1.2; }
 .tally.is-week { --badge: #e03131; }
 .tally.is-month { --badge: var(--podium-1); --badge-ink: var(--podium-ink); }
-.tally i { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; flex: none; background: var(--badge); color: var(--badge-ink); font: 800 0.625rem/1 var(--font-body); font-style: normal; letter-spacing: -0.02em; }
+.tally i { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; flex: none; background: var(--badge); color: var(--badge-ink); font: 800 0.625rem/1 var(--font-body); font-style: normal; letter-spacing: -0.04em; }
 .tally b { color: var(--ink); }
 .tally.is-zero b { font-weight: 400; color: var(--muted); }
 .ui-flag { width: 28px; height: 19px; border-radius: 3px; box-shadow: 0 0 0 1px var(--line); stroke: none; }
@@ -1403,7 +1399,7 @@ h1, h2, p { margin: 0; }
 .podium-place { --medal: var(--podium-1); display: inline-flex; align-items: center; gap: 4px; font-size: 0.8125rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .podium-place.p2 { --medal: var(--podium-2); }
 .podium-place.p3 { --medal: var(--podium-3); }
-.podium-place i { display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 50%; background: var(--medal); color: var(--podium-ink); font: 700 0.625rem/1 var(--font-body); }
+.podium-place i { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--medal); color: var(--podium-ink); font: 700 0.625rem/1 var(--font-body); }
 .podium-place b { color: var(--ink); }
 /* a place not reached yet: only the ring of its medal */
 .podium-place.is-zero i { background: none; box-shadow: inset 0 0 0 1.5px var(--medal); color: var(--muted); }
@@ -2225,10 +2221,6 @@ h1, h2, p { margin: 0; }
       </div>
     </div>`;
   }
-  // the ranked games still to play today on their button, as a fraction: the number big over a short bar and, small,
-  // the games of a day
-  const compGamesFraction = (left, of) =>
-    `<span class="comp-frac" aria-hidden="true"><span class="comp-frac-n">${left}</span><span class="comp-frac-d">${of}</span></span><span class="sr-only">${tr(`, hoy ${left} de ${of}`, `, today ${left} of ${of}`)}</span>`;
   // the ranked games still to play today in a language (an open one included), for the colour of its «Competición
   // semanal»: null while not known; asked to the server at most once a minute
   function compGamesLeft(language) {
@@ -2288,7 +2280,7 @@ h1, h2, p { margin: 0; }
       ? `${compFormatSwitch(format)}
         <div class="btn-stack">
           ${active ? `<button class="btn btn-primary" type="button" data-act="comp-resume" data-id="${esc(active.session_id)}">${tr('Continuar la partida puntuable', 'Continue the ranked game')}</button><button class="btn" type="button" data-act="comp-abandon-open" data-id="${esc(active.session_id)}">${tr('Abandonarla (no suma puntos)', 'Abandon it (no points)')}</button>` : ''}
-          ${!active && left > 0 ? `<button class="btn btn-primary comp-ranked" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr('Jugar partida puntuable', 'Play a ranked game')}${compGamesFraction(left, st.rules ? st.rules.daily_limit : 3)}</button>` : ''}
+          ${!active && left > 0 ? `<button class="btn btn-primary comp-ranked" type="button" data-act="comp-play" data-mode="competitive" ${comp.busy ? 'disabled' : ''}>${tr('Jugar partida puntuable', 'Play a ranked game')}</button>` : ''}
           <button class="btn" type="button" data-act="comp-play" data-mode="practice" ${comp.busy ? 'disabled' : ''}>${tr('Jugar en práctica <small>(no suma puntos)</small>', 'Play for practice <small>(no points)</small>')}</button>
         </div>
         <p class="hint">${compRulesText(st.rules, format)}</p>`
@@ -2302,7 +2294,7 @@ h1, h2, p { margin: 0; }
         <div class="stats">
           ${stat(tr('Tus puntos', 'Your points'), fmtInt(st.total_points || 0))}
           ${stat(tr('Posición', 'Rank'), st.rank ? `${fmtInt(st.rank)}<small> ${tr('de', 'of')} ${fmtInt(st.players || 0)}</small>` : '—')}
-          ${current ? stat(tr('Hoy quedan', 'Left today'), `${left}<small> ${tr('partidas', 'games')}</small>`) : stat(tr('Partidas', 'Games'), fmtInt(st.games_played || 0))}
+          ${current ? stat(tr('Hoy quedan', 'Left today'), `${left}<small>/${st.rules ? st.rules.daily_limit : 3}</small>`) : stat(tr('Partidas', 'Games'), fmtInt(st.games_played || 0))}
         </div>
         ${current ? `<p class="hint">${tr(`Cierra en ${fmtLeft(st.seconds_left)} (lunes a las 00:00, hora de España).`, `Closes in ${fmtLeft(st.seconds_left)} (Monday at 00:00, Spanish time).`)}</p>` : ''}
         ${playBlock}
